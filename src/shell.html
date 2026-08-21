@@ -1,0 +1,450 @@
+<title>Tarkov Raid Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+:root{
+  --bg:#F1EEE4; --surface:#FBF9F2; --surface-2:#E7E1D0; --sunk:#DED7C3;
+  --line:#D2CAB4; --line-strong:#B4AA8E;
+  --text:#21231A; --text-2:#4A4B3B; --muted:#6B6B55;
+  --accent:#7B5F0E; --accent-ink:#FBF9F2;
+  --good:#4A6624; --warn:#95500D; --crit:#8E2E1A;
+  --bar-1:#8A6B12; --bar-2:#C0B688; --bar-track:#DED7C3;
+  --shadow:0 1px 2px rgba(33,35,26,.07), 0 10px 26px -14px rgba(33,35,26,.28);
+  --r:3px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F100A; --surface:#171A11; --surface-2:#1F2318; --sunk:#0B0C07;
+    --line:#2F3427; --line-strong:#474D3A;
+    --text:#E5E0CD; --text-2:#BDB9A4; --muted:#8E8D76;
+    --accent:#D2AC33; --accent-ink:#14150D;
+    --good:#93AC59; --warn:#D68C36; --crit:#CE5B3E;
+    --bar-1:#D2AC33; --bar-2:#5F5D42; --bar-track:#23261B;
+    --shadow:0 1px 0 rgba(255,255,255,.03), 0 12px 28px -16px rgba(0,0,0,.75);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F100A; --surface:#171A11; --surface-2:#1F2318; --sunk:#0B0C07;
+  --line:#2F3427; --line-strong:#474D3A;
+  --text:#E5E0CD; --text-2:#BDB9A4; --muted:#8E8D76;
+  --accent:#D2AC33; --accent-ink:#14150D;
+  --good:#93AC59; --warn:#D68C36; --crit:#CE5B3E;
+  --bar-1:#D2AC33; --bar-2:#5F5D42; --bar-track:#23261B;
+  --shadow:0 1px 0 rgba(255,255,255,.03), 0 12px 28px -16px rgba(0,0,0,.75);
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{font-family:"Saira Condensed","Arial Narrow",sans-serif; font-weight:700; letter-spacing:.01em; text-wrap:balance; margin:0}
+.mono{font-family:"IBM Plex Mono",ui-monospace,Consolas,monospace; font-variant-numeric:tabular-nums}
+.lbl{font-family:"Saira Condensed","Arial Narrow",sans-serif; font-weight:600; text-transform:uppercase; letter-spacing:.12em; font-size:11px; color:var(--muted)}
+a{color:var(--accent); text-underline-offset:2px}
+button{font:inherit; color:inherit; cursor:pointer}
+input,select,textarea{font:inherit}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none !important; transition:none !important}}
+
+.wrap{max-width:1180px; margin:0 auto; padding:0 20px}
+header.top{position:sticky; top:0; z-index:30; background:color-mix(in srgb, var(--bg) 93%, transparent); backdrop-filter:blur(8px); border-bottom:1px solid var(--line)}
+.topbar{display:flex; align-items:center; gap:14px; padding:11px 0; flex-wrap:wrap}
+.brand{display:flex; align-items:baseline; gap:10px; margin-right:auto}
+.brand h1{font-size:25px; line-height:1; text-transform:uppercase; letter-spacing:.04em}
+.brand .tag{font-size:11px; color:var(--muted); font-family:"Saira Condensed","Arial Narrow",sans-serif; text-transform:uppercase; letter-spacing:.14em}
+.ctl{display:flex; align-items:center; gap:7px; background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:4px 9px}
+.ctl input[type=number]{width:46px; background:transparent; border:0; color:var(--text); font-family:"IBM Plex Mono",monospace; font-size:15px; font-weight:600; text-align:right}
+.ctl input[type=number]::-webkit-outer-spin-button,.ctl input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none; margin:0}
+.ctl select{background:transparent; border:0; color:var(--text); font-size:13px; max-width:120px}
+nav.tabs{display:flex; gap:2px; border-bottom:1px solid var(--line); overflow-x:auto}
+nav.tabs button{background:none; border:0; border-bottom:2px solid transparent; padding:9px 14px; font-family:"Saira Condensed","Arial Narrow",sans-serif; font-weight:600; font-size:15px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); white-space:nowrap}
+nav.tabs button:hover{color:var(--text)}
+nav.tabs button[aria-selected="true"]{color:var(--text); border-bottom-color:var(--accent)}
+main{padding:20px 0 90px}
+section[hidden]{display:none}
+.stack{display:flex; flex-direction:column; gap:16px}
+
+.card{background:var(--surface); border:1px solid var(--line); border-radius:var(--r); box-shadow:var(--shadow)}
+.card-h{display:flex; align-items:center; gap:10px; padding:11px 14px; border-bottom:1px solid var(--line); flex-wrap:wrap}
+.card-h h2{font-size:16px; text-transform:uppercase; letter-spacing:.06em}
+.card-h .sp{margin-left:auto}
+.card-b{padding:14px}
+.note{font-size:12.5px; color:var(--muted); max-width:68ch}
+
+.tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px}
+.tile{background:var(--surface); border:1px solid var(--line); border-left:3px solid var(--line-strong); border-radius:var(--r); padding:10px 13px}
+.tile.hi{border-left-color:var(--accent)}
+.tile .v{font-family:"IBM Plex Mono",monospace; font-weight:600; font-size:26px; line-height:1.15; font-variant-numeric:tabular-nums}
+.tile .v small{font-size:13px; color:var(--muted); font-weight:500}
+.tile .s{font-size:12px; color:var(--muted); margin-top:1px}
+
+.rank-row{display:grid; grid-template-columns:24px minmax(90px,1.05fr) minmax(0,2.1fr) auto; gap:12px; align-items:center; padding:10px 14px; border:0; border-bottom:1px solid var(--line); background:none; width:100%; text-align:left}
+.rank-row:last-of-type{border-bottom:0}
+.rank-row:hover{background:var(--surface-2)}
+.rank-row[aria-current="true"]{background:var(--surface-2)}
+.rank-n{font-family:"IBM Plex Mono",monospace; font-size:13px; color:var(--muted); font-weight:600}
+.rank-name{display:block; font-family:"Saira Condensed","Arial Narrow",sans-serif; font-weight:700; font-size:17.5px; letter-spacing:.02em; line-height:1.15}
+.rank-sub{display:block; font-size:11.5px; color:var(--muted); margin-top:2px}
+.bar{position:relative; height:13px; background:var(--bar-track); border-radius:2px; display:flex; gap:2px; overflow:hidden}
+.bar i{display:block; height:100%; border-radius:0 4px 4px 0; min-width:0}
+.bar i.a{background:var(--bar-1)}
+.bar i.b{background:var(--bar-2)}
+.rank-score{font-family:"IBM Plex Mono",monospace; font-weight:600; font-size:16px; text-align:right; min-width:54px}
+.rank-score em{display:block; font-style:normal; font-size:10px; color:var(--muted); font-weight:500; letter-spacing:.06em; text-transform:uppercase; font-family:"Saira Condensed","Arial Narrow",sans-serif}
+.legend{display:flex; gap:16px; align-items:center; padding:9px 14px; border-top:1px solid var(--line); font-size:12px; color:var(--muted); flex-wrap:wrap}
+.legend b{display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:6px; vertical-align:-1px}
+.seg-a{background:var(--bar-1)} .seg-b{background:var(--bar-2)}
+
+.chips{display:flex; flex-wrap:wrap; gap:6px; align-items:center}
+.chip{display:inline-flex; align-items:center; gap:5px; padding:2px 8px; border-radius:2px; border:1px solid var(--line-strong); background:var(--surface-2); color:var(--text-2); font-size:11.5px; font-family:"Saira Condensed","Arial Narrow",sans-serif; font-weight:600; text-transform:uppercase; letter-spacing:.06em; white-space:nowrap}
+.chip.k{border-color:color-mix(in srgb,var(--accent) 55%,transparent); color:var(--accent); background:transparent}
+.chip.key{border-color:color-mix(in srgb,var(--warn) 55%,transparent); color:var(--warn); background:transparent}
+.chip.good{border-color:color-mix(in srgb,var(--good) 55%,transparent); color:var(--good); background:transparent}
+.chip.crit{border-color:color-mix(in srgb,var(--crit) 55%,transparent); color:var(--crit); background:transparent}
+button.chip[aria-pressed="true"]{background:var(--accent); border-color:var(--accent); color:var(--accent-ink)}
+button.chip.act{background:transparent; border-style:dashed; color:var(--muted)}
+button.chip.act:hover{border-style:solid; border-color:var(--good); color:var(--good)}
+button.chip.ign:hover{border-color:var(--warn); color:var(--warn)}
+button.chip.ign[aria-pressed="true"]{border-style:solid; border-color:var(--warn); color:var(--warn); background:transparent}
+.chip.warnc{border-color:color-mix(in srgb,var(--warn) 55%,transparent); color:var(--warn); background:transparent}
+
+.filters{display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:11px 14px; border-bottom:1px solid var(--line)}
+.filters input[type=search], .filters select{background:var(--bg); border:1px solid var(--line); border-radius:var(--r); padding:5px 9px; color:var(--text); font-size:13.5px}
+.filters input[type=search]{min-width:210px}
+
+.qrow{display:grid; grid-template-columns:minmax(0,1fr) auto auto; gap:10px; align-items:center; padding:9px 14px; border-bottom:1px solid var(--line)}
+.qrow:last-child{border-bottom:0}
+.qrow.dim{opacity:.55}
+.qrow .qn{font-family:"Saira Condensed","Arial Narrow",sans-serif; font-weight:600; font-size:16.5px; line-height:1.2}
+.qmeta{display:flex; gap:6px; flex-wrap:wrap; margin-top:4px}
+
+.seg{display:inline-flex; border:1px solid var(--line-strong); border-radius:var(--r); overflow:hidden; flex:none}
+.seg button{background:var(--surface); border:0; border-right:1px solid var(--line); padding:4px 10px; font-family:"Saira Condensed","Arial Narrow",sans-serif; font-weight:600; font-size:12.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted)}
+.seg button:last-child{border-right:0}
+.seg button:hover{color:var(--text); background:var(--surface-2)}
+.seg button[aria-pressed="true"]{background:var(--accent); color:var(--accent-ink)}
+.seg button[data-set="d"][aria-pressed="true"]{background:var(--good); color:var(--bg)}
+
+.live{display:inline-flex; align-items:center; gap:7px; padding:4px 10px; border-radius:var(--r); border:1px solid color-mix(in srgb,var(--good) 50%,transparent); background:color-mix(in srgb,var(--good) 12%,transparent); color:var(--good); font-family:"Saira Condensed","Arial Narrow",sans-serif; font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.09em}
+.live i{width:7px; height:7px; border-radius:50%; background:var(--good); flex:none; animation:pulse 2.4s ease-in-out infinite}
+.live.stale{border-color:color-mix(in srgb,var(--warn) 50%,transparent); background:color-mix(in srgb,var(--warn) 12%,transparent); color:var(--warn)}
+.live.stale i{background:var(--warn); animation:none}
+.live:hover{border-color:var(--good); filter:brightness(1.15)}
+.live.busy{opacity:.6; pointer-events:none}
+
+/* sync sits in the top bar because you want it the moment you are back from a raid */
+.topsync{display:inline-flex; align-items:center; gap:6px; padding:4px 11px; border-radius:var(--r); border:1px solid var(--line-strong); background:var(--surface-2); color:var(--text-2); font-family:"Saira Condensed","Arial Narrow",sans-serif; font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.09em; cursor:pointer}
+.topsync:hover{border-color:var(--accent); color:var(--accent)}
+.topsync .ic{display:inline-block; font-size:13px; line-height:1}
+.topsync.busy{opacity:.6; pointer-events:none}
+.topsync.busy .ic{animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* what you are pointing at on the map */
+.pintip{position:absolute; z-index:6; max-width:290px; padding:7px 10px; border:1px solid var(--line-strong); border-radius:var(--r); background:var(--surface); color:var(--text); box-shadow:0 6px 20px rgba(0,0,0,.28); font-size:12.5px; line-height:1.4; pointer-events:none}
+.pintip b{display:block; font-family:"Saira Condensed","Arial Narrow",sans-serif; text-transform:uppercase; letter-spacing:.07em; font-size:11.5px; color:var(--accent); margin-bottom:2px}
+
+/* wiki location screenshots, fetched once and then served from disk */
+.shots{padding:0 14px 12px 26px}
+.shots-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:9px}
+.shots-grid a{display:block; border:1px solid var(--line); border-radius:var(--r); overflow:hidden; background:var(--sunk); text-decoration:none}
+.shots-grid a:hover{border-color:var(--accent)}
+.shots-grid img{display:block; width:100%; height:auto}
+.shots-cap{display:block; padding:5px 8px; font-size:11.5px; color:var(--muted); border-top:1px solid var(--line)}
+.shots-note{margin:0; padding:4px 0; font-size:12.5px; color:var(--muted)}
+.chip.shotsb[aria-pressed="true"]{background:var(--accent); color:var(--accent-ink); border-color:var(--accent)}
+.chip.moved{border-color:var(--warn); color:var(--warn)}
+
+/* story chapters: hand-ticked, so the list has to be pleasant to read top to bottom */
+.chip.story{border-color:var(--accent); color:var(--accent)}
+.story-card{margin-bottom:14px}
+.story-bar{height:4px; background:var(--sunk); margin:0 14px; border-radius:2px; overflow:hidden}
+.story-bar i{display:block; height:100%; background:var(--accent); transition:width .18s ease}
+.story-objs{padding:8px 0 6px}
+.obj.sub{padding-left:52px}
+.obj.hd{padding-top:12px}
+.obj.hd .od{font-family:"Saira Condensed","Arial Narrow",sans-serif; font-weight:600; text-transform:uppercase; letter-spacing:.09em; font-size:11.5px; color:var(--muted)}
+.obj.hd.done .od{text-decoration:none}
+.story-note{margin:0; font-size:12.5px; color:var(--muted); line-height:1.5}
+
+/* the wiki's own directions for a single objective */
+.guideb{align-self:start; padding:2px 8px; border-radius:2px; border:1px solid var(--line-strong); background:var(--surface-2); color:var(--muted); font-family:"Saira Condensed","Arial Narrow",sans-serif; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.07em; cursor:pointer; white-space:nowrap}
+.guideb:hover{border-color:var(--accent); color:var(--accent)}
+.guideb[aria-pressed="true"]{background:var(--accent); color:var(--accent-ink); border-color:var(--accent)}
+.guide{padding:0 14px 14px 52px; border-left:2px solid var(--accent); margin:0 0 6px 26px; background:color-mix(in srgb,var(--accent) 4%,transparent)}
+.guide-text{margin:0 0 9px; padding-top:9px; font-size:13px; line-height:1.6; color:var(--text-2)}
+.guide .shots{padding:0}
+.story-extra{border-top:1px solid var(--line); margin-top:6px; padding:10px 0 4px}
+.story-extra .lbl{margin:0 0 4px 26px}
+.ig{margin-top:11px; padding-top:10px; border-top:1px dashed var(--line)}
+.ig-n{margin:0 0 3px; font-family:"Saira Condensed","Arial Narrow",sans-serif; font-weight:600; text-transform:uppercase; letter-spacing:.08em; font-size:11.5px; color:var(--accent)}
+.ig .guide-text{padding-top:0}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.live i{animation:none}}
+
+.banner{background:var(--surface-2); border:1px solid var(--line); border-left:3px solid var(--accent); border-radius:var(--r); padding:10px 13px; font-size:13.5px; color:var(--text-2)}
+.banner.raid{border-left-color:var(--good)}
+.banner[hidden]{display:none}
+.linkish{background:none; border:0; padding:0; color:var(--accent); font:inherit; text-decoration:underline; text-underline-offset:2px}
+
+.tick{appearance:none; width:17px; height:17px; margin:2px 0 0; border:1px solid var(--line-strong); border-radius:2px; background:var(--bg); display:grid; place-content:center; cursor:pointer; flex:none}
+.tick:checked{background:var(--good); border-color:var(--good)}
+.tick:checked::after{content:""; width:9px; height:5px; border:2px solid var(--bg); border-top:0; border-right:0; transform:rotate(-45deg) translateY(-1px)}
+.tick:disabled{opacity:.4; cursor:not-allowed}
+
+.parked-h{padding:14px 14px 6px; border-top:1px solid var(--line); font-family:"Saira Condensed","Arial Narrow",sans-serif; font-weight:600; font-size:11.5px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted)}
+.grp-parked{opacity:.5}
+.grp-parked:hover{opacity:.78}
+.grp-parked .tick{cursor:default}
+button.chip.unign{border-style:dashed; background:transparent; color:var(--warn); border-color:color-mix(in srgb,var(--warn) 55%,transparent)}
+button.chip.unign:hover{border-style:solid; border-color:var(--good); color:var(--good)}
+
+.grp{border-bottom:1px solid var(--line)}
+.grp:last-child{border-bottom:0}
+.grp-h{display:flex; gap:10px; align-items:baseline; padding:11px 14px 6px; flex-wrap:wrap}
+.grp-h .qn{font-family:"Saira Condensed","Arial Narrow",sans-serif; font-weight:700; font-size:17px}
+.grp-h .qn a{color:inherit; text-decoration:none}
+.grp-h .qn a:hover{text-decoration:underline}
+.obj{display:grid; grid-template-columns:26px minmax(0,1fr) auto; gap:11px; align-items:start; padding:6px 14px 6px 26px}
+.obj:last-child{padding-bottom:12px}
+.obj.done label{text-decoration:line-through; color:var(--muted)}
+.obj .od{font-size:14px; line-height:1.4}
+.obj .oe{display:flex; gap:6px; flex-wrap:wrap; margin-top:3px}
+.obj label{cursor:pointer; display:block}
+
+.loadout{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:0}
+.lo{padding:12px 14px; border-right:1px solid var(--line)}
+.lo:last-child{border-right:0}
+.lo h3{font-size:12px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted); margin-bottom:7px; font-weight:600}
+.lo ul{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:4px}
+.lo li{font-size:13.5px; display:flex; gap:7px; align-items:baseline}
+.lo li::before{content:""; width:5px; height:5px; border-radius:1px; background:var(--accent); flex:none; transform:translateY(-2px)}
+.qty{font-family:"IBM Plex Mono",monospace; font-weight:600; font-variant-numeric:tabular-nums; color:var(--accent)}
+.chip .qty{color:inherit}
+.lo .none{font-size:13px; color:var(--muted); font-style:italic}
+
+.mapwrap{position:relative; background:var(--sunk); overflow:hidden; touch-action:none; cursor:grab}
+.mapwrap.dragging{cursor:grabbing}
+.mapwrap svg{display:block; width:100%; height:auto; max-height:74vh}
+.mapwrap .empty{padding:34px 14px}
+.pin-zone{fill:color-mix(in srgb,var(--accent) 30%,transparent); stroke:var(--accent); cursor:pointer}
+.pin-spot{fill:color-mix(in srgb,var(--accent) 45%,transparent); stroke:var(--accent); cursor:pointer}
+.pin-badge circle{fill:var(--accent); stroke:#000; stroke-opacity:.55}
+.pin-badge text{fill:var(--accent-ink); font-family:"IBM Plex Mono",monospace; font-weight:600; text-anchor:middle; dominant-baseline:central; pointer-events:none}
+.pin-badge{cursor:pointer}
+.pin-zone.pin-done, .pin-spot.pin-done{fill:color-mix(in srgb,var(--good) 22%,transparent); stroke:var(--good)}
+.pin-badge.pin-done circle{fill:var(--good)}
+.pin-off{display:none}
+.obj.done .pinno{background:var(--line-strong); color:var(--surface)}
+.pin-zone.hot, .pin-spot.hot{fill:color-mix(in srgb,var(--crit) 55%,transparent); stroke:var(--crit)}
+.pin-badge.hot circle{fill:var(--crit); stroke:#fff; stroke-opacity:.9}
+.pin-badge.hot text{fill:#fff}
+.exit-mark{fill:#cfc7ad; stroke:rgba(0,0,0,.75)}
+.exit-label{fill:#e6e0cc; stroke:rgba(0,0,0,.85); paint-order:stroke; stroke-linejoin:round;
+  font-family:"Saira Condensed","Arial Narrow",sans-serif; font-weight:600; letter-spacing:.02em;
+  dominant-baseline:central; pointer-events:none}
+.exit-scav .exit-mark{fill:#8e8a74}
+.exit-scav .exit-label{fill:#b3ad96}
+.exit-transit .exit-mark{fill:#6fb3c2}
+.exit-transit .exit-label{fill:#9ed6e2}
+.pinno{display:inline-grid; place-content:center; min-width:19px; height:19px; padding:0 4px; margin-right:2px; border:0; border-radius:10px; background:var(--accent); color:var(--accent-ink); font-family:"IBM Plex Mono",monospace; font-size:11.5px; font-weight:600; vertical-align:1px}
+.pinno:hover{background:var(--crit); color:#fff}
+.obj.done .pinno{background:var(--good)}
+
+.mapsel{display:flex; gap:6px; flex-wrap:wrap; padding:11px 14px; border-bottom:1px solid var(--line)}
+.setgrid{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px}
+.field{display:flex; flex-direction:column; gap:5px; margin-bottom:12px}
+.field label{font-size:12px; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); font-family:"Saira Condensed","Arial Narrow",sans-serif; font-weight:600}
+.field input,.field select,.field textarea{background:var(--bg); border:1px solid var(--line); border-radius:var(--r); padding:7px 9px; color:var(--text); font-size:14px}
+.field textarea{min-height:96px; font-family:"IBM Plex Mono",monospace; font-size:11.5px; resize:vertical}
+.btn{background:var(--surface-2); border:1px solid var(--line-strong); border-radius:var(--r); padding:6px 13px; font-family:"Saira Condensed","Arial Narrow",sans-serif; font-weight:600; text-transform:uppercase; letter-spacing:.07em; font-size:13.5px}
+.btn:hover{border-color:var(--accent); color:var(--accent)}
+.btn.primary{background:var(--accent); border-color:var(--accent); color:var(--accent-ink)}
+.btn.primary:hover{color:var(--accent-ink); filter:brightness(1.08)}
+.btnrow{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+.empty{padding:30px 14px; text-align:center; color:var(--muted); font-size:14px}
+.tbl{width:100%; border-collapse:collapse; font-size:13.5px}
+.tbl th,.tbl td{text-align:left; padding:6px 10px; border-bottom:1px solid var(--line)}
+.tbl th{font-family:"Saira Condensed","Arial Narrow",sans-serif; text-transform:uppercase; letter-spacing:.08em; font-size:11.5px; color:var(--muted); font-weight:600}
+.tbl td.n{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums; text-align:right}
+.scroll{overflow-x:auto}
+.toast{position:fixed; left:50%; bottom:22px; transform:translateX(-50%); background:var(--text); color:var(--bg); padding:8px 16px; border-radius:var(--r); font-size:13.5px; box-shadow:var(--shadow); z-index:60}
+.toast[hidden]{display:none}
+@media (max-width:720px){
+  .rank-row{grid-template-columns:22px minmax(0,1fr) auto; row-gap:7px}
+  .rank-row .bar-cell{grid-column:1 / -1}
+  .lo{border-right:0; border-bottom:1px solid var(--line)}
+}
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <h1>Raid Board</h1>
+        <span class="tag">Escape from Tarkov</span>
+      </div>
+      <button class="live" id="live-pill" hidden title="Click to re-read your game logs"><i></i><span id="live-text">Reading game logs</span></button>
+      <button class="topsync" id="s-sync-top" hidden title="Re-read your game logs now"><span class="ic">&#8635;</span>Sync</button>
+      <div class="ctl"><span class="lbl">LVL</span><input id="lvl" type="number" min="1" max="79" value="15"></div>
+      <div class="ctl"><span class="lbl">Side</span><select id="faction"><option>Any</option><option>USEC</option><option>BEAR</option></select></div>
+      <div class="ctl"><span class="lbl">Theme</span><select id="theme"><option value="system">System</option><option value="dark">Dark</option><option value="light">Light</option></select></div>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" id="tab-board" aria-selected="true" aria-controls="v-board">Raid Board</button>
+      <button role="tab" id="tab-map" aria-selected="false" aria-controls="v-map">Map Plan</button>
+      <button role="tab" id="tab-quests" aria-selected="false" aria-controls="v-quests">Quests</button>
+      <button role="tab" id="tab-story" aria-selected="false" aria-controls="v-story">Story</button>
+      <button role="tab" id="tab-setup" aria-selected="false" aria-controls="v-setup">Setup</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="banner raid" id="raid-banner" hidden style="margin-bottom:16px"></div>
+  <section id="v-board" role="tabpanel" aria-labelledby="tab-board" class="stack">
+    <div class="tiles" id="tiles"></div>
+    <div class="banner" id="mode-banner" hidden></div>
+    <div class="card">
+      <div class="card-h">
+        <h2>Where to run next</h2>
+        <div class="sp chips">
+          <button class="chip" id="mode-journal" aria-pressed="true">My journal</button>
+          <button class="chip" id="mode-unlocked" aria-pressed="false">Everything unlocked</button>
+          <span class="lbl" style="margin:0 4px">|</span>
+          <button class="chip" id="sort-total" aria-pressed="true">Total value</button>
+          <button class="chip" id="sort-rate" aria-pressed="false">Per minute</button>
+          <button class="chip" id="kappa-only" aria-pressed="false">Kappa only</button>
+        </div>
+      </div>
+      <div id="rank"></div>
+      <div class="legend">
+        <span><b class="seg-a"></b>Only doable here</span>
+        <span><b class="seg-b"></b>Doable here or elsewhere</span>
+        <span id="rank-note"></span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h2>Keep if you see it</h2><span class="sp lbl" id="fir-n"></span></div>
+      <div class="card-b">
+        <p class="note" style="margin:0 0 10px">Found-in-raid turn-ins for your quests. These are not tied to a map — pick them up in any raid and they stop being a chore later.</p>
+        <div class="chips" id="fir-list"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h2>How the score works</h2></div>
+      <div class="card-b">
+        <p class="note" style="margin:0 0 10px">Every quest you can currently accept is broken into its raid objectives. A map earns <strong>3 points</strong> for each quest it would finish outright, <strong>1 point</strong> for each objective that can only be done there, and <strong>0.4</strong> for each objective you could also do somewhere else. Optional objectives count half. Turn-ins, trader levels and skill grinds score nothing — they are not raid work.</p>
+        <div class="scroll"><table class="tbl" id="score-tbl"></table></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="v-map" role="tabpanel" aria-labelledby="tab-map" hidden class="stack">
+    <div class="card">
+      <div class="mapsel" id="mapsel"></div>
+      <div class="loadout" id="loadout"></div>
+    </div>
+    <div class="card" id="map-card" hidden style="position:relative">
+      <div class="card-h">
+        <h2>Where to go</h2>
+        <span class="sp lbl" id="map-hint"></span>
+        <button class="chip" id="map-exits" aria-pressed="true">Exits &amp; transits</button>
+        <button class="chip" id="map-fit">Reset view</button>
+      </div>
+      <div class="mapwrap" id="mapwrap"></div>
+      <div class="pintip" id="pintip" hidden></div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h2 id="map-obj-h">Objectives</h2><span class="sp lbl" id="map-obj-n"></span></div>
+      <div id="map-objs"></div>
+    </div>
+  </section>
+
+  <section id="v-quests" role="tabpanel" aria-labelledby="tab-quests" class="stack" hidden>
+    <div class="card">
+      <div class="filters">
+        <input type="search" id="q-search" placeholder="Search quests, traders, objectives">
+        <select id="q-trader"><option value="">All traders</option></select>
+        <select id="q-map"><option value="">All maps</option></select>
+        <select id="q-status">
+          <option value="unlocked">Unlocked, not started</option>
+          <option value="active">In my journal</option>
+          <option value="done">Completed</option>
+          <option value="locked">Locked</option>
+          <option value="ignored">Ignored</option>
+          <option value="all">All</option>
+        </select>
+        <button class="chip" id="q-kappa" aria-pressed="false">Kappa only</button>
+        <span class="sp lbl" id="q-count"></span>
+      </div>
+      <div id="q-list"></div>
+    </div>
+    <p class="note">Mark <strong>Active</strong> for anything sitting in your in-game quest list — that is what the raid board scores. Marking a quest <strong>Done</strong> also marks everything it required, so you can set up a whole chain from its last quest.<br><span id="done-count"></span></p>
+  </section>
+
+  <section id="v-story" role="tabpanel" aria-labelledby="tab-story" class="stack" hidden>
+    <div class="card">
+      <div class="card-h"><h2>Story chapters</h2><span class="sp lbl" id="story-note"></span></div>
+      <div style="padding:12px 14px 14px">
+        <p class="story-note">The ten chapters that lead to an ending. They have no trader, tarkov.dev
+        does not carry them, and nothing in the game logs reports their progress — so these are yours
+        to tick. Objectives that name a map count towards the Raid Board score and show up on that
+        map's plan; talking to a trader and handing things in score nothing, same as anywhere else.</p>
+      </div>
+    </div>
+    <div id="story-list"></div>
+  </section>
+
+  <section id="v-setup" role="tabpanel" aria-labelledby="tab-setup" hidden class="stack">
+    <div class="card">
+      <div class="card-h"><h2>Your progress</h2></div>
+      <div class="card-b setgrid">
+        <div>
+          <div class="field">
+            <label for="s-lvl">PMC level</label>
+            <input id="s-lvl" type="number" min="1" max="79">
+          </div>
+          <div class="field">
+            <label for="s-faction">Side</label>
+            <select id="s-faction"><option>Any</option><option>USEC</option><option>BEAR</option></select>
+          </div>
+          <p class="note" id="storage-note"></p>
+        </div>
+        <div>
+          <div class="field">
+            <label for="s-json">Backup / restore</label>
+            <textarea id="s-json" spellcheck="false" placeholder="Paste a backup here and press Restore"></textarea>
+          </div>
+          <div class="btnrow">
+            <button class="btn primary" id="s-copy">Copy backup</button>
+            <button class="btn" id="s-save">Save file</button>
+            <button class="btn" id="s-restore">Restore</button>
+            <button class="btn" id="s-reset">Reset progress</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h2>Game logs</h2><span class="sp lbl" id="log-state"></span></div>
+      <div class="card-b">
+        <p class="note" id="log-note" style="margin:0 0 12px"></p>
+        <div class="btnrow">
+          <button class="btn primary" id="s-sync">Sync from logs</button>
+          <button class="chip" id="s-follow" aria-pressed="true">Follow me into raids</button>
+          <button class="btn" id="s-clear-marks">Clear manual changes</button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h2>Data</h2></div>
+      <div class="card-b">
+        <p class="note" id="prov"></p>
+      </div>
+    </div>
+  </section>
+</main>
+<div class="toast" id="toast" hidden></div>

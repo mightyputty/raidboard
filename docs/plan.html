@@ -1,0 +1,371 @@
+<title>Shipping Raid Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+:root{
+  --bg:#F1EEE4; --surface:#FBF9F2; --surface-2:#E7E1D0; --sunk:#DED7C3;
+  --line:#D2CAB4; --line-strong:#B4AA8E;
+  --text:#21231A; --text-2:#4A4B3B; --muted:#6B6B55;
+  --accent:#7B5F0E; --accent-ink:#FBF9F2;
+  --good:#4A6624; --warn:#95500D; --crit:#8E2E1A;
+  --r:3px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F100A; --surface:#171A11; --surface-2:#1F2318; --sunk:#0B0C07;
+    --line:#2F3427; --line-strong:#474D3A;
+    --text:#E5E0CD; --text-2:#BDB9A4; --muted:#8E8D76;
+    --accent:#D2AC33; --accent-ink:#14150D;
+    --good:#93AC59; --warn:#D68C36; --crit:#CE5B3E;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F100A; --surface:#171A11; --surface-2:#1F2318; --sunk:#0B0C07;
+  --line:#2F3427; --line-strong:#474D3A;
+  --text:#E5E0CD; --text-2:#BDB9A4; --muted:#8E8D76;
+  --accent:#D2AC33; --accent-ink:#14150D;
+  --good:#93AC59; --warn:#D68C36; --crit:#CE5B3E;
+}
+*{box-sizing:border-box}
+body{margin:0; background:var(--bg); color:var(--text);
+  font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:15.5px; line-height:1.65; -webkit-font-smoothing:antialiased}
+.wrap{max-width:940px; margin:0 auto; padding:56px 24px 96px}
+h1,h2,h3{font-family:"Saira Condensed","Arial Narrow",sans-serif; font-weight:700; text-wrap:balance; margin:0; letter-spacing:.01em}
+h1{font-size:44px; line-height:1.05; letter-spacing:.02em; text-transform:uppercase}
+h2{font-size:23px; text-transform:uppercase; letter-spacing:.05em}
+h3{font-size:16px; letter-spacing:.04em; text-transform:uppercase; color:var(--text-2)}
+p{margin:0}
+a{color:var(--accent); text-underline-offset:2px}
+code,.mono{font-family:"IBM Plex Mono",ui-monospace,Consolas,monospace; font-variant-numeric:tabular-nums}
+code{font-size:.9em; background:var(--surface-2); padding:1px 5px; border-radius:var(--r)}
+.lbl{font-family:"Saira Condensed","Arial Narrow",sans-serif; font-weight:600; text-transform:uppercase; letter-spacing:.14em; font-size:11px; color:var(--muted)}
+header.top{display:flex; flex-direction:column; gap:14px; padding-bottom:26px; border-bottom:2px solid var(--line-strong)}
+.eyebrow{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+.dot{width:7px; height:7px; border-radius:50%; background:var(--accent); flex:none}
+.thesis{max-width:64ch; font-size:17px; color:var(--text-2)}
+.locked{display:grid; grid-template-columns:repeat(auto-fit,minmax(228px,1fr)); gap:10px; margin:34px 0 0}
+.locked div{background:var(--surface); border:1px solid var(--line); padding:12px 15px; display:flex; flex-direction:column; gap:3px}
+.locked dt{margin:0}
+.locked dd{margin:0; font-size:14.5px; color:var(--text)}
+section{margin-top:52px}
+.intro{max-width:66ch; color:var(--text-2); margin-top:10px}
+ol.stages{list-style:none; margin:26px 0 0; padding:0; display:flex; flex-direction:column}
+ol.stages > li{display:grid; grid-template-columns:56px minmax(0,1fr); gap:20px; padding-bottom:34px}
+ol.stages > li:last-child{padding-bottom:0}
+.rail{display:flex; flex-direction:column; align-items:center; gap:8px}
+.num{font-family:"IBM Plex Mono",monospace; font-weight:600; font-size:13px; width:32px; height:32px;
+     display:grid; place-content:center; border:1px solid var(--line-strong); border-radius:50%;
+     background:var(--surface); color:var(--accent); flex:none}
+.spine{width:1px; flex:1; background:var(--line); min-height:16px}
+ol.stages > li:last-child .spine{display:none}
+.stage-body h2{margin-bottom:4px}
+.meta{display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 12px}
+.chip{font-family:"Saira Condensed","Arial Narrow",sans-serif; font-weight:600; text-transform:uppercase;
+      letter-spacing:.07em; font-size:11px; padding:2px 8px; border:1px solid var(--line-strong);
+      border-radius:var(--r); color:var(--text-2); background:var(--surface-2)}
+.chip.why{border-color:var(--accent); color:var(--accent); background:transparent}
+.stage-body p{max-width:64ch}
+ul.tasks{margin:11px 0 0; padding-left:18px; max-width:64ch}
+ul.tasks li{margin-bottom:5px}
+ul.tasks li::marker{color:var(--muted)}
+.arch{margin-top:22px; border:1px solid var(--line); background:var(--surface); padding:18px}
+.arch-row{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px}
+.box{border:1px solid var(--line-strong); background:var(--surface-2); padding:11px 13px; border-radius:var(--r)}
+.box .lbl{display:block; margin-bottom:3px}
+.box p{font-size:13.5px; color:var(--text-2); line-height:1.5}
+.joiner{text-align:center; color:var(--muted); font-size:12px; padding:9px 0; letter-spacing:.1em;
+        text-transform:uppercase; font-family:"Saira Condensed","Arial Narrow",sans-serif}
+.shared{border:1px dashed var(--accent); background:transparent; padding:11px 13px; border-radius:var(--r)}
+.shared .lbl{color:var(--accent); display:block; margin-bottom:3px}
+.shared p{font-size:13.5px; color:var(--text-2); line-height:1.5}
+.tw{overflow-x:auto; margin-top:16px; border:1px solid var(--line)}
+table{border-collapse:collapse; width:100%; font-size:14.5px; background:var(--surface)}
+th,td{text-align:left; padding:9px 13px; border-bottom:1px solid var(--line); vertical-align:top}
+th{font-family:"Saira Condensed","Arial Narrow",sans-serif; font-weight:600; text-transform:uppercase;
+   letter-spacing:.1em; font-size:11px; color:var(--muted); background:var(--surface-2); white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td.no{font-family:"IBM Plex Mono",monospace; color:var(--crit); font-weight:600}
+td.yes{font-family:"IBM Plex Mono",monospace; color:var(--good); font-weight:600}
+.risks{display:flex; flex-direction:column; margin-top:20px; border:1px solid var(--line)}
+.risk{display:grid; grid-template-columns:4px minmax(0,1fr); background:var(--surface); border-bottom:1px solid var(--line)}
+.risk:last-child{border-bottom:0}
+.risk .stripe{background:var(--muted)}
+.risk.high .stripe{background:var(--crit)}
+.risk.med .stripe{background:var(--warn)}
+.risk.low .stripe{background:var(--good)}
+.risk .rc{padding:12px 15px}
+.risk h3{margin-bottom:3px}
+.risk p{font-size:14px; color:var(--text-2); max-width:64ch}
+.note{margin-top:16px; border-left:2px solid var(--accent); padding:2px 0 2px 15px; max-width:64ch;
+      color:var(--text-2); font-size:14.5px}
+footer{margin-top:64px; padding-top:20px; border-top:1px solid var(--line); color:var(--muted); font-size:13px}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+@media (max-width:640px){
+  h1{font-size:33px}
+  .wrap{padding:36px 18px 64px}
+  ol.stages > li{grid-template-columns:36px minmax(0,1fr); gap:14px}
+  .num{width:28px; height:28px; font-size:12px}
+}
+</style>
+
+<div class="wrap">
+
+<header class="top">
+  <div class="eyebrow"><span class="dot"></span><span class="lbl">Build plan &middot; raidboard.gg</span></div>
+  <h1>Shipping Raid Board</h1>
+  <p class="thesis">Taking the local quest board public as a static site with no backend, plus a
+  downloadable build &mdash; and adding wiki directions for all 517 quests, which is the thing no
+  other tracker does.</p>
+</header>
+
+<dl class="locked">
+  <div><dt class="lbl">Name</dt><dd>Raid Board &middot; raidboard.gg</dd></div>
+  <div><dt class="lbl">Hosting</dt><dd>Cloudflare Pages, static</dd></div>
+  <div><dt class="lbl">Backend</dt><dd>None. Progress stays in the browser</dd></div>
+  <div><dt class="lbl">Distribution</dt><dd>Hosted site plus a single .exe</dd></div>
+  <div><dt class="lbl">Game modes</dt><dd>PVP and PVE, auto-detected</dd></div>
+  <div><dt class="lbl">Licence</dt><dd>Open source on GitHub</dd></div>
+  <div><dt class="lbl">Dropped</dt><dd>Kappa filters, Everything unlocked</dd></div>
+  <div><dt class="lbl">Sequence</dt><dd>Build it all, then launch</dd></div>
+</dl>
+
+<section>
+  <h2>How one codebase serves both</h2>
+  <p class="intro">The only thing that differs between the hosted site and the download is where log
+  lines come from. Everything above that line &mdash; scoring, map plans, guides, story chapters &mdash;
+  is byte-identical.</p>
+  <div class="arch">
+    <div class="arch-row">
+      <div class="box">
+        <span class="lbl">Hosted &middot; raidboard.gg</span>
+        <p>Browser reads the Logs folder through a directory handle. Chromium only. Reads while the
+        tab is open.</p>
+      </div>
+      <div class="box">
+        <span class="lbl">Download &middot; raidboard.exe</span>
+        <p>Local watcher polls every 2s in the background. Any browser, no permission prompt, caches
+        screenshots for offline use.</p>
+      </div>
+      <div class="box">
+        <span class="lbl">Neither</span>
+        <p>Firefox, or someone who declines. Falls back to ticking by hand, like every other tracker.</p>
+      </div>
+    </div>
+    <div class="joiner">all three feed the same interface</div>
+    <div class="shared">
+      <span class="lbl">Shared core</span>
+      <p>Quest journal, map scoring, per-map loadouts, pins, story chapters, wiki guides. Progress in
+      localStorage, with export and import for backup.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>The six stages</h2>
+  <p class="intro">Ordered by dependency, not by appeal. Each unblocks the next, and the piece most
+  likely to fail outright sits early on purpose.</p>
+
+  <ol class="stages">
+
+    <li>
+      <div class="rail"><span class="num">1</span><span class="spine"></span></div>
+      <div class="stage-body">
+        <h2>Strip, rename, open the repo</h2>
+        <div class="meta">
+          <span class="chip">about half a day</span>
+          <span class="chip why">Everything downstream is smaller once the dead code is gone</span>
+        </div>
+        <p>Cutting the two features you dropped removes a mode toggle, a filter, two chip styles and a
+        branch through every scoping function. Do it before anything else, so the restructure and the
+        log port work on the smaller surface.</p>
+        <ul class="tasks">
+          <li>Delete the mode toggle, the Kappa chips and filters, and the <code>k</code> field from the dataset.</li>
+          <li>Keep <code>req</code>, the unlock chain. Marking a quest done still cascades to its prerequisites and the Quests page still separates locked from available. Drop the visible chain caveat &mdash; that is a note to you, not to a stranger.</li>
+          <li>Rename to Raid Board throughout, and register raidboard.gg.</li>
+          <li>MIT licence, a README written for players rather than for you, CONTRIBUTING, and attribution for tarkov.dev and the wiki under CC BY-SA.</li>
+          <li>GitHub repo with Cloudflare Pages connected, deploying the current build as-is so the pipeline is proven before it matters.</li>
+        </ul>
+      </div>
+    </li>
+
+    <li>
+      <div class="rail"><span class="num">2</span><span class="spine"></span></div>
+      <div class="stage-body">
+        <h2>Split the payload, add PVE</h2>
+        <div class="meta">
+          <span class="chip">about 2 days</span>
+          <span class="chip why">Guides for 517 quests have nowhere to live until this lands</span>
+        </div>
+        <p>One inlined 651 KB HTML file works today and stops working the moment every quest carries a
+        guide. It becomes a small shell, a core dataset, and one lazily-fetched file per quest.</p>
+        <ul class="tasks">
+          <li><code>index.html</code> &mdash; shell and app only, roughly 60 KB.</li>
+          <li><code>core.json</code> &mdash; quests, objectives, maps, keys, scoring. Everything needed before you click anything.</li>
+          <li>One guide file per quest, fetched only when a Guide button is pressed.</li>
+          <li>PVE is far cheaper than I first estimated: 517 PVP tasks against 514 PVE, only 26 and 23 exclusive either way, and <strong>every shared quest has identical objectives</strong>. So it is one list of about 540 quests tagged pvp, pve or both &mdash; roughly 5% more data, not double.</li>
+          <li>Nightly rebuild in GitHub Actions that commits the built data, so an outage upstream never takes the site down with it.</li>
+        </ul>
+      </div>
+    </li>
+
+    <li>
+      <div class="rail"><span class="num">3</span><span class="spine"></span></div>
+      <div class="stage-body">
+        <h2>Move the log reader into the browser</h2>
+        <div class="meta">
+          <span class="chip">about 3 days</span>
+          <span class="chip why">Riskiest piece &mdash; prove it before building on it</span>
+        </div>
+        <p>The whole hosted product rests on this working. Chrome 151 on your machine has every API it
+        needs and the proof-of-concept parses your real logs, so the remaining risk is whether the
+        permission survives between visits, not whether the reading works.</p>
+        <ul class="tasks">
+          <li>Port <code>lib/logs.js</code> to run in the page. The parsing is unchanged; only file access differs.</li>
+          <li>A log-source interface with three implementations: local watcher, directory handle, none.</li>
+          <li>Directory handle kept in IndexedDB so the folder is chosen once, ever, with one click to re-grant if the permission lapses.</li>
+          <li>Detect the mode from <code>Session mode: PvpSeason</code> and switch the quest list to match.</li>
+          <li><strong>Fix the failed-quest bug while you are in here.</strong> Message type 11 means failed and nothing reads it, so Chemical Part 4 and Big Customer still show as active on your board. The text field lies &mdash; it says <em>quest started</em> even on failures, and only the failMessageText suffix is honest.</li>
+          <li>A first-run flow, because there is none today &mdash; it works because it is your machine.</li>
+        </ul>
+      </div>
+    </li>
+
+    <li>
+      <div class="rail"><span class="num">4</span><span class="spine"></span></div>
+      <div class="stage-body">
+        <h2>Guides for all 517 quests</h2>
+        <div class="meta">
+          <span class="chip">about 3 days</span>
+          <span class="chip why">The wedge &mdash; the reason to use this over TarkovTracker</span>
+        </div>
+        <p>The machinery exists and is proven on the story chapters: a guide-section parser,
+        exact-then-fuzzy heading matching, and item location pages found through links and backlinks.
+        This points it at every quest in the game.</p>
+        <ul class="tasks">
+          <li>Wikitext for all 517 pages costs about 11 requests, not 517 &mdash; the API takes 50 titles at a time.</li>
+          <li>Reuse the story parser unchanged. Sections matching no objective keep going to <em>Also in the guide</em> rather than being attached to the wrong step.</li>
+          <li>Item pages via links and backlinks, kept only when the Location section has a gallery. Without pictures it is always a generic loot list and no use to anyone.</li>
+          <li>The hosted build points images at the wiki CDN; the download keeps caching them to disk so it works offline.</li>
+          <li>Expect real gaps. The wiki writes no guide for plenty of objectives, and that has to read as <em>nothing written for this one</em> rather than as a broken feature.</li>
+        </ul>
+      </div>
+    </li>
+
+    <li>
+      <div class="rail"><span class="num">5</span><span class="spine"></span></div>
+      <div class="stage-body">
+        <h2>Package the download</h2>
+        <div class="meta">
+          <span class="chip">about 1 day</span>
+          <span class="chip why">Independent of the site, so it can slip without blocking launch</span>
+        </div>
+        <ul class="tasks">
+          <li>Node&rsquo;s single-executable build, bundling the watcher and the static site into one file. Double-click, the browser opens, done.</li>
+          <li>No Node install and no terminal. That matters: most Tarkov players are never going to run a command to start a quest tracker.</li>
+          <li>Unsigned binaries trip SmartScreen. Either document it plainly with a checksum, or budget roughly 200 dollars a year to sign. Documenting is fine to start.</li>
+          <li>Ship from GitHub Releases so the binary and the nightly data rebuild stay in step.</li>
+        </ul>
+      </div>
+    </li>
+
+    <li>
+      <div class="rail"><span class="num">6</span><span class="spine"></span></div>
+      <div class="stage-body">
+        <h2>Make it survivable</h2>
+        <div class="meta">
+          <span class="chip">about 2 days</span>
+          <span class="chip why">Last, because it hardens what the other five built</span>
+        </div>
+        <ul class="tasks">
+          <li>Wipe day: log-driven tracking heals itself, since a wipe resets the logs too. Only hand-set marks need clearing, so detect the profile change and offer it rather than doing it silently.</li>
+          <li>Degrade properly when upstream is down. tarkov.dev&rsquo;s GraphQL has been returning 422 this entire time, so the site must never depend on a live third party at page load.</li>
+          <li>A landing page that says what it does in one line, and a privacy note that can afford to be blunt: there is no server to send anything to.</li>
+          <li>Say plainly that logs are read and never written, and that nothing is injected into the game. People will ask, and TarkovMonitor set the precedent.</li>
+        </ul>
+      </div>
+    </li>
+
+  </ol>
+</section>
+
+<section>
+  <h2>What the logs can and cannot tell us</h2>
+  <p class="intro">Checked against your 29 session folders rather than assumed, because each of these
+  either removes a setting or kills a feature idea.</p>
+  <div class="tw">
+    <table>
+      <thead><tr><th>Signal</th><th>Available</th><th>Consequence</th></tr></thead>
+      <tbody>
+        <tr><td>Quest accepted, done, failed</td><td class="yes">yes</td><td>The whole journal. Type 11 is failure and is still unread.</td></tr>
+        <tr><td>Game mode</td><td class="yes">yes</td><td>Session mode: PvpSeason. PVE and PVP switch themselves.</td></tr>
+        <tr><td>Map, raid start and end</td><td class="yes">yes</td><td>Jump straight to the right map plan on load-in.</td></tr>
+        <tr><td>Server region, ping, raid length</td><td class="yes">yes</td><td>Available but unused. A raid history is there if you ever want it.</td></tr>
+        <tr><td>PMC level</td><td class="no">no</td><td>Stays a manual field. The Level lines are the Strength skill, not your level.</td></tr>
+        <tr><td>Faction</td><td class="no">no</td><td>Stays a manual field. USEC and BEAR appear nowhere in the logs.</td></tr>
+        <tr><td>Live position</td><td class="no">no</td><td>Coordinates are logged, but only on desync &mdash; 162 lines across 120 raids. No you-are-here dot.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>What could go wrong</h2>
+  <div class="risks">
+    <div class="risk high"><div class="stripe"></div><div class="rc">
+      <h3>tarkov.dev is a single point of failure</h3>
+      <p>Their GraphQL API has been down the entire time this was built, and the whole dataset comes
+      from their static dumps. Commit built data to the repo so the site serves the last good copy
+      indefinitely, and treat a failed rebuild as a warning rather than a deploy.</p>
+    </div></div>
+    <div class="risk high"><div class="stripe"></div><div class="rc">
+      <h3>Wipe day is launch day and breaking day at once</h3>
+      <p>It is when every player goes looking for a tracker and when all the quest data churns.
+      Traffic is free on a static host, so the risk is correctness, not load. Have a rebuild you can
+      run on demand rather than waiting for the nightly job.</p>
+    </div></div>
+    <div class="risk med"><div class="stripe"></div><div class="rc">
+      <h3>Fandom could block hotlinked images</h3>
+      <p>Thousands of screenshots served from their CDN to strangers is exactly the pattern hosts
+      block. The fallback is Cloudflare R2, which costs money and brings attribution duties, so keep
+      the build able to switch image hosts with one flag.</p>
+    </div></div>
+    <div class="risk med"><div class="stripe"></div><div class="rc">
+      <h3>Auto-tracking is Chromium-only on the web</h3>
+      <p>Firefox has declined to implement directory picking. Tarkov is Windows-only so the audience
+      skews heavily to Chrome and Edge, but roughly 5 to 7 percent land on manual ticking. The
+      download has no such limit, which is a real reason to offer it.</p>
+    </div></div>
+    <div class="risk med"><div class="stripe"></div><div class="rc">
+      <h3>SmartScreen will flag the executable</h3>
+      <p>An unsigned binary that reads game files is exactly what a wary player is right to hesitate
+      over. Publish checksums, keep the source open so the build is reproducible, and revisit signing
+      if the download gets traction.</p>
+    </div></div>
+    <div class="risk low"><div class="stripe"></div><div class="rc">
+      <h3>The domain becomes permanent</h3>
+      <p>Progress lives in localStorage, which is scoped to the origin. Moving off raidboard.gg later
+      wipes everyone&rsquo;s hand-set ticks unless they export first. Worth making export prominent
+      from day one regardless.</p>
+    </div></div>
+  </div>
+</section>
+
+<section>
+  <h2>Before stage 1</h2>
+  <p class="intro">Two things worth doing first, both cheap.</p>
+  <p class="note"><strong>Confirm the proof-of-concept.</strong> It is still running on
+  127.0.0.1:8779. Point it at your Logs folder and check the counts match the board. If they do,
+  stage 3 is derisked before a line of it is written &mdash; and if the permission survives a reload
+  without prompting again, so is the returning-visitor experience.</p>
+  <p class="note"><strong>Register raidboard.gg.</strong> It was free as of this writing, but that is
+  not a reservation, and every document from here on names it.</p>
+</section>
+
+<footer>
+  Raid Board build plan &middot; quest data from tarkov.dev &middot; guides and screenshots from the
+  Escape from Tarkov Wiki, CC BY-SA &middot; not affiliated with Battlestate Games
+</footer>
+
+</div>
