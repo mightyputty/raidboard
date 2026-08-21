@@ -16,9 +16,6 @@
     t.req.forEach(function (r) { (DEPENDENTS[r.t] = DEPENDENTS[r.t] || []).push(t.i); });
   });
 
-  var KAPPA_TOTAL = TASKS.filter(function (t) { return t.k; }).length;
-  // tarkov.dev's kappa flag is sometimes unpopulated; only offer the filter when it looks real
-  var KAPPA_OK = KAPPA_TOTAL > 50;
 
   // ---------- state ----------
   var KEY = "tarkov-raid-board/v1";
@@ -26,9 +23,7 @@
   var S = {
     level: 15,
     faction: "Any",
-    kappaOnly: false,
     sort: "total",
-    mode: "journal",     // journal = quests you have accepted; unlocked = everything you could pick up
     theme: "system",
     map: null,
     autoFollow: true,    // jump to a map's plan when you load into it
@@ -47,7 +42,7 @@
     if (!raw) return;
     try {
       var o = JSON.parse(raw);
-      ["level", "faction", "kappaOnly", "sort", "mode", "theme", "map", "autoFollow", "showExits"].forEach(function (k) {
+      ["level", "faction", "sort", "theme", "map", "autoFollow", "showExits"].forEach(function (k) {
         if (o[k] !== undefined && o[k] !== null) S[k] = o[k];
       });
       if (o.marks) S.marks = o.marks;
@@ -106,9 +101,7 @@
   }
 
   function inScope(t) {
-    if (isIgnored(t.i)) return false;
-    if (S.kappaOnly && KAPPA_OK && !t.k) return false;
-    return S.mode === "journal" ? isActive(t.i) : isUnlocked(t);
+    return !isIgnored(t.i) && isActive(t.i);
   }
 
   function openObjectives(t) {
@@ -178,7 +171,6 @@
   function taskChips(t) {
     var c = ['<span class="chip' + (t.story ? " story" : "") + '">' + esc(t.tr || "—") + "</span>"];
     if (t.lvl > 0) c.push('<span class="chip">Lv ' + t.lvl + "</span>");
-    if (KAPPA_OK && t.k) c.push('<span class="chip k">Kappa</span>');
     if (t.f) c.push('<span class="chip crit">' + esc(t.f) + " only</span>");
     return c.join("");
   }
@@ -280,10 +272,9 @@
     var ignoredCount = TASKS.filter(function (t) { return isIgnored(t.i); }).length;
 
     document.getElementById("tiles").innerHTML = [
-      tile(S.mode === "journal" ? journalCount : scoped.length,
-        (S.mode === "journal" ? "quests marked active" : "quests you could pick up at level " + S.level) +
-        (ignoredCount ? " · " + ignoredCount + " ignored" : ""),
-        S.mode === "journal" ? "In your journal" : "Unlocked quests", true),
+      tile(journalCount,
+        "quests marked active" + (ignoredCount ? " · " + ignoredCount + " ignored" : ""),
+        "In your journal", true),
       tile(openObjs, "objectives still to do in raid", "Raid work left"),
       tile(best ? best.map.name : "—",
         best ? n1(best.score) + " points across " + best.questCount + " quest" + (best.questCount === 1 ? "" : "s") : "nothing to run",
@@ -291,17 +282,12 @@
       tile(best ? best.keyList.length : 0, best ? "to open everything on " + best.map.name : "no map selected", "Keys to bring")
     ].join("");
 
-    var banner = document.getElementById("mode-banner");
-    if (S.mode === "journal" && journalCount === 0) {
+    var banner = document.getElementById("empty-banner");
+    if (journalCount === 0) {
       banner.hidden = false;
-      banner.innerHTML = 'Nothing is marked active yet. Open <button class="linkish" data-goto="quests">Quests</button>, ' +
-        'tick the quests sitting in your in-game journal, and this board will rank maps around them. ' +
-        'Or <button class="linkish" data-mode="unlocked">plan from everything you could pick up</button> instead.';
-    } else if (S.mode === "unlocked") {
-      banner.hidden = false;
-      banner.innerHTML = "Planning from every quest you could accept at level " + S.level +
-        ". <button class=\"linkish\" data-mode=\"journal\">Switch to the quests in your journal</button> for a sharper answer." +
-        (HEALTH.chainsMissing ? " " + HEALTH.chainsMissing + " quests have no chain data upstream, so a few locked ones may appear here." : "");
+      banner.innerHTML = 'Nothing is in your journal yet. Point the board at your game logs in ' +
+        '<button class="linkish" data-goto="setup">Setup</button> and it will fill itself in, or open ' +
+        '<button class="linkish" data-goto="quests">Quests</button> and tick them by hand.';
     } else {
       banner.hidden = true;
     }
@@ -486,8 +472,7 @@
   function ignoredForMap(mapId) {
     return TASKS.filter(function (t) {
       if (!isIgnored(t.i)) return false;
-      if (S.kappaOnly && KAPPA_OK && !t.k) return false;
-      return S.mode === "journal" ? isActive(t.i) : isUnlocked(t);
+      return isActive(t.i);
     }).map(function (t) {
       var objs = openObjectives(t).filter(function (o) {
         return o.mp && o.mp.indexOf(mapId) >= 0;
@@ -799,11 +784,9 @@
     var trader = document.getElementById("q-trader").value;
     var map = document.getElementById("q-map").value;
     var status = document.getElementById("q-status").value;
-    var kappa = KAPPA_OK && document.getElementById("q-kappa").getAttribute("aria-pressed") === "true";
 
     var rows = TASKS.filter(function (t) {
       if (trader && t.tr !== trader) return false;
-      if (kappa && !t.k) return false;
       if (map && t.maps.indexOf(map) < 0) return false;
       if (status === "done" && !isDone(t.i)) return false;
       if (status === "active" && !isActive(t.i)) return false;
@@ -837,7 +820,6 @@
         (locked ? '<span class="chip">Locked</span>' : "") +
         (ign ? '<span class="chip warnc">Ignored</span>' : "") +
         (isOverridden(t.i) ? '<span class="chip crit" title="you set this by hand; the game logs say otherwise">manual</span>' : "") +
-        (t.rs ? '<span class="chip" title="chain recovered from an older dump">chain: 2024 data</span>' : "") +
         (t.w ? '<a class="chip" href="' + esc(t.w) + '" target="_blank" rel="noopener">Wiki</a>' : "") +
         "</div></div>" +
         '<div class="seg" role="group" data-id="' + esc(t.i) + '" aria-label="' + esc(t.n) + ' status">' +
@@ -893,13 +875,13 @@
       esc(new Date(DATA.generated).toLocaleDateString()) + ": <strong>" + TASKS.length + " quests</strong>, " +
       TASKS.reduce(function (s, t) { return s + t.obj.length; }, 0) + " objectives, " + MAPS.length + " maps. " +
       "This is the PVP list; PVE differs only in a few event quests." +
-      "<br><br><strong>Known gaps in the upstream data.</strong> " +
-      (HEALTH.chainsFromSource || 0) + " quests carry their unlock chain from tarkov.dev and " +
-      (HEALTH.chainsFromLegacy || 0) + " were recovered from a 2024 community dump, but " +
-      (HEALTH.chainsMissing || 0) + " still have none — mostly quests added since then. " +
-      "That only affects the <em>unlocked quests</em> planning mode; tracking what is in your journal is unaffected. " +
-      (KAPPA_OK ? "" : "tarkov.dev is also currently reporting only " + KAPPA_TOTAL + " Kappa-required quests, which is wrong, so Kappa filters are hidden. ") +
-      "Run <code>node build.js --refresh</code> to pull fresh data once tarkov.dev's API recovers.";
+      "<br><br>Story chapters and the guides behind every Guide button come from the " +
+      "<a href=\"https://escapefromtarkov.fandom.com\" target=\"_blank\" rel=\"noopener\">Escape from Tarkov Wiki</a>, " +
+      "used under CC BY-SA." +
+      "<br><br><strong>One gap worth knowing.</strong> " +
+      (HEALTH.chainsMissing || 0) + " quests are missing their unlock chain upstream, mostly ones added recently. " +
+      "That only weakens the <em>Still gated</em> filter and the cascade when you mark a quest done — " +
+      "what is in your journal comes from your own logs and is unaffected.";
   }
 
   /** The wiki's own directions for one objective, plus the shots that go with them. */
@@ -1148,15 +1130,6 @@
     persist();
   });
 
-  function setMode(v) {
-    S.mode = v;
-    document.getElementById("mode-journal").setAttribute("aria-pressed", String(v === "journal"));
-    document.getElementById("mode-unlocked").setAttribute("aria-pressed", String(v === "unlocked"));
-    persist(); renderAll();
-  }
-  document.getElementById("mode-journal").addEventListener("click", function () { setMode("journal"); });
-  document.getElementById("mode-unlocked").addEventListener("click", function () { setMode("unlocked"); });
-
   function setSort(v) {
     S.sort = v;
     document.getElementById("sort-total").setAttribute("aria-pressed", String(v === "total"));
@@ -1166,17 +1139,9 @@
   document.getElementById("sort-total").addEventListener("click", function () { setSort("total"); });
   document.getElementById("sort-rate").addEventListener("click", function () { setSort("rate"); });
 
-  document.getElementById("kappa-only").addEventListener("click", function () {
-    S.kappaOnly = !S.kappaOnly;
-    this.setAttribute("aria-pressed", String(S.kappaOnly));
-    persist(); renderAll();
-  });
-
-  document.getElementById("mode-banner").addEventListener("click", function (e) {
-    var b = e.target.closest("button");
-    if (!b) return;
-    if (b.dataset.mode) setMode(b.dataset.mode);
-    if (b.dataset.goto) tab(b.dataset.goto);
+  document.getElementById("empty-banner").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-goto]");
+    if (b) tab(b.dataset.goto);
   });
 
   document.getElementById("rank").addEventListener("click", function (e) {
@@ -1383,10 +1348,6 @@
     var el = document.getElementById(id);
     el.addEventListener("input", renderQuests);
     el.addEventListener("change", renderQuests);
-  });
-  document.getElementById("q-kappa").addEventListener("click", function () {
-    this.setAttribute("aria-pressed", String(this.getAttribute("aria-pressed") !== "true"));
-    renderQuests();
   });
 
   // ---------- backup / restore ----------
@@ -1598,16 +1559,9 @@
   document.getElementById("faction").value = S.faction;
   document.getElementById("theme").value = S.theme;
   if (S.theme !== "system") document.documentElement.setAttribute("data-theme", S.theme);
-  document.getElementById("mode-journal").setAttribute("aria-pressed", String(S.mode === "journal"));
-  document.getElementById("mode-unlocked").setAttribute("aria-pressed", String(S.mode === "unlocked"));
   document.getElementById("sort-total").setAttribute("aria-pressed", String(S.sort === "total"));
   document.getElementById("sort-rate").setAttribute("aria-pressed", String(S.sort === "rate"));
-  document.getElementById("kappa-only").setAttribute("aria-pressed", String(S.kappaOnly));
   document.getElementById("map-exits").setAttribute("aria-pressed", String(S.showExits !== false));
-  if (!KAPPA_OK) {
-    document.getElementById("kappa-only").hidden = true;
-    document.getElementById("q-kappa").hidden = true;
-  }
 
   var tsel = document.getElementById("q-trader");
   DATA.traders.forEach(function (t) {

@@ -182,7 +182,6 @@ async function refresh() {
       w: t.wikiLink || null,
       lvl: t.minPlayerLevel || 0,
       xp: t.experience || 0,
-      k: t.kappaRequired ? 1 : 0,
       lk: t.lightkeeperRequired ? 1 : 0,
       f: t.factionName && t.factionName !== "Any" ? t.factionName : null,
       m: t.map && (!taskMaps.length || taskMaps.indexOf(mapById[t.map]) >= 0) ? mapById[t.map] : null,
@@ -218,10 +217,9 @@ async function refresh() {
     maps: Object.values(canon).sort((a, b) => a.name.localeCompare(b.name)),
     traders: [...new Set(out.map((t) => t.tr).filter(Boolean))],
     health: {
-      chainsFromSource: out.filter((t) => t.req.length && !t.rs).length,
+      chainsFromSource: out.filter((t) => t.req.length).length - legacyFilled,
       chainsFromLegacy: legacyFilled,
-      chainsMissing: out.filter((t) => !t.req.length && !t.story).length,
-      kappaFlagged: out.filter((t) => t.k).length
+      chainsMissing: out.filter((t) => !t.req.length && !t.story).length
     },
     tasks: out
   };
@@ -299,7 +297,6 @@ async function fillChainGaps(tasks) {
     )];
     if (!ids.length) continue;
     t.req = ids.map((gid) => ({ t: gid, s: "complete" }));
-    t.rs = 1; // chain recovered from the older dump, not the live source
     filled++;
   }
   console.log(`  chain backfill: ${filled} quests recovered from the 2024 community dump`);

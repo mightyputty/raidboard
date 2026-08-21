@@ -1,4 +1,4 @@
-<title>Tarkov Raid Board</title>
+<title>Raid Board · Escape from Tarkov</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
@@ -307,17 +307,13 @@ button.chip.unign:hover{border-style:solid; border-color:var(--good); color:var(
   <div class="banner raid" id="raid-banner" hidden style="margin-bottom:16px"></div>
   <section id="v-board" role="tabpanel" aria-labelledby="tab-board" class="stack">
     <div class="tiles" id="tiles"></div>
-    <div class="banner" id="mode-banner" hidden></div>
+    <div class="banner" id="empty-banner" hidden></div>
     <div class="card">
       <div class="card-h">
         <h2>Where to run next</h2>
         <div class="sp chips">
-          <button class="chip" id="mode-journal" aria-pressed="true">My journal</button>
-          <button class="chip" id="mode-unlocked" aria-pressed="false">Everything unlocked</button>
-          <span class="lbl" style="margin:0 4px">|</span>
           <button class="chip" id="sort-total" aria-pressed="true">Total value</button>
           <button class="chip" id="sort-rate" aria-pressed="false">Per minute</button>
-          <button class="chip" id="kappa-only" aria-pressed="false">Kappa only</button>
         </div>
       </div>
       <div id="rank"></div>
@@ -371,14 +367,13 @@ button.chip.unign:hover{border-style:solid; border-color:var(--good); color:var(
         <select id="q-trader"><option value="">All traders</option></select>
         <select id="q-map"><option value="">All maps</option></select>
         <select id="q-status">
-          <option value="unlocked">Unlocked, not started</option>
           <option value="active">In my journal</option>
+          <option value="unlocked">Ready to pick up</option>
+          <option value="locked">Still gated</option>
           <option value="done">Completed</option>
-          <option value="locked">Locked</option>
           <option value="ignored">Ignored</option>
           <option value="all">All</option>
         </select>
-        <button class="chip" id="q-kappa" aria-pressed="false">Kappa only</button>
         <span class="sp lbl" id="q-count"></span>
       </div>
       <div id="q-list"></div>

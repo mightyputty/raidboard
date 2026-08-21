@@ -1,0 +1,15 @@
+{
+  "name": "raid-board",
+  "version": "0.1.0",
+  "description": "Ranks Escape from Tarkov maps by how much quest progress a raid there is worth, and tells you what to bring.",
+  "license": "MIT",
+  "private": true,
+  "type": "commonjs",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node board.js",
+    "build": "node build.js",
+    "refresh": "node build.js --refresh"
+  },
+  "keywords": ["escape-from-tarkov", "tarkov", "quests", "tracker"]
+}
