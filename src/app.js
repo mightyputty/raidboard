@@ -282,12 +282,20 @@
       tile(best ? best.keyList.length : 0, best ? "to open everything on " + best.map.name : "no map selected", "Keys to bring")
     ].join("");
 
+    // Story chapters are permanently in your journal, so on their own they tell us nothing about
+    // your progress — and a board ranked off them alone recommends The Lab to a level 1 player.
+    var traderActive = TASKS.filter(function (t) {
+      return !t.story && isActive(t.i) && !isIgnored(t.i);
+    }).length;
     var banner = document.getElementById("empty-banner");
-    if (journalCount === 0) {
+    if (traderActive === 0) {
       banner.hidden = false;
-      banner.innerHTML = 'Nothing is in your journal yet. Point the board at your game logs in ' +
-        '<button class="linkish" data-goto="setup">Setup</button> and it will fill itself in, or open ' +
-        '<button class="linkish" data-goto="quests">Quests</button> and tick them by hand.';
+      banner.innerHTML = (journalCount
+        ? "This is ranking your story chapters and nothing else, so it leans late-game. "
+        : "Nothing is in your journal yet. ") +
+        'Point the board at your game logs in <button class="linkish" data-goto="setup">Setup</button> ' +
+        'and it fills itself in, or tick quests by hand in ' +
+        '<button class="linkish" data-goto="quests">Quests</button>.';
     } else {
       banner.hidden = true;
     }

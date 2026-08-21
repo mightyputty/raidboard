@@ -29,6 +29,29 @@ const HEADERS = `/maps/*
 /
   Cache-Control: public, max-age=0, must-revalidate
 `;
+const NOT_FOUND = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Not found &middot; Raid Board</title>
+<style>
+:root{--bg:#F1EEE4;--text:#21231A;--muted:#6B6B55;--accent:#7B5F0E}
+@media (prefers-color-scheme:dark){:root{--bg:#0F100A;--text:#E5E0CD;--muted:#8E8D76;--accent:#D2AC33}}
+body{margin:0;min-height:100vh;display:grid;place-content:center;gap:10px;text-align:center;
+  background:var(--bg);color:var(--text);font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif;padding:24px}
+h1{margin:0;font-size:22px;letter-spacing:.08em;text-transform:uppercase}
+p{margin:0;color:var(--muted)}
+a{color:var(--accent)}
+</style>
+</head>
+<body>
+<h1>Nothing here</h1>
+<p>That page does not exist.</p>
+<p><a href="/">Back to the board</a></p>
+</body>
+</html>
+`;
 const BASE = "https://json.tarkov.dev/regular/";
 // tarkov.dev's quest-chain links are currently incomplete; this older community
 // dump still carries the chains for quests that existed in 2024, keyed by BSG id.
@@ -340,6 +363,7 @@ function assemble() {
     maps++;
   }
   fs.writeFileSync(path.join(DIST, "_headers"), HEADERS);
+  fs.writeFileSync(path.join(DIST, "404.html"), NOT_FOUND);
 
   const kb = Math.round(fs.statSync(path.join(DIST, "index.html")).size / 1024);
   console.log(`Built dist/index.html (${kb} KB) and ${maps} maps`);
