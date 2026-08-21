@@ -5,9 +5,10 @@
  *   node build.js            assemble from data/tarkov-data.json
  *   node build.js --refresh  re-download from tarkov.dev first (do this after a wipe)
  *
- * Outputs:
- *   tarkov-raid-board.html        page body only — what the Artifact tool publishes
- *   tarkov-raid-board.local.html  standalone file you can open from disk
+ * Outputs dist/, which is what both the local server and Cloudflare Pages serve:
+ *   dist/index.html   the whole board, data inlined
+ *   dist/maps/*.svg   vector maps
+ *   dist/_headers     caching rules for Pages
  */
 const fs = require("fs");
 const path = require("path");
@@ -17,6 +18,17 @@ const ROOT = __dirname;
 const SRC = path.join(ROOT, "src");
 const DATA_DIR = path.join(ROOT, "data");
 const DATA_FILE = path.join(DATA_DIR, "tarkov-data.json");
+const MAPS_DIR = path.join(DATA_DIR, "maps");
+const DIST = path.join(ROOT, "dist");
+// Cloudflare Pages reads this. Maps never change without a rebuild, but the page itself
+// must not be cached, or people sit on a stale board the day after a wipe.
+const HEADERS = `/maps/*
+  Cache-Control: public, max-age=31536000, immutable
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+/
+  Cache-Control: public, max-age=0, must-revalidate
+`;
 const BASE = "https://json.tarkov.dev/regular/";
 // tarkov.dev's quest-chain links are currently incomplete; this older community
 // dump still carries the chains for quests that existed in 2024, keyed by BSG id.
@@ -306,25 +318,31 @@ async function fillChainGaps(tasks) {
 function assemble() {
   const shell = fs.readFileSync(path.join(SRC, "shell.html"), "utf8");
   const app = fs.readFileSync(path.join(SRC, "app.js"), "utf8");
-  const data = fs.readFileSync(DATA_FILE, "utf8").replace(/</g, "\\u003c");
+  const data = fs.readFileSync(DATA_FILE, "utf8").replace(/</g, "\u003c");
 
   const body = shell +
     '\n<script id="tarkov-data" type="application/json">' + data + "</script>\n" +
     "<script>\n" + app + "</script>\n";
 
-  fs.writeFileSync(path.join(ROOT, "tarkov-raid-board.html"), body);
-
-  // the standalone copy is the same content, split so the title/fonts/CSS sit in <head>
   const cut = body.indexOf("</style>") + "</style>".length;
-  fs.writeFileSync(
-    path.join(ROOT, "tarkov-raid-board.local.html"),
+  const page =
     '<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n' +
     '<meta name="viewport" content="width=device-width, initial-scale=1">\n' +
-    body.slice(0, cut) + "\n</head>\n<body>\n" + body.slice(cut) + "\n</body>\n</html>\n"
-  );
+    '<meta name="description" content="Ranks Escape from Tarkov maps by how much quest progress a raid there is worth, and tells you what to bring.">\n' +
+    body.slice(0, cut) + "\n</head>\n<body>\n" + body.slice(cut) + "\n</body>\n</html>\n";
 
-  const kb = (f) => Math.round(fs.statSync(path.join(ROOT, f)).size / 1024);
-  console.log(`Built tarkov-raid-board.html (${kb("tarkov-raid-board.html")} KB) and tarkov-raid-board.local.html (${kb("tarkov-raid-board.local.html")} KB)`);
+  // dist/ is what gets served, locally and on the web — same bytes either way
+  fs.mkdirSync(path.join(DIST, "maps"), { recursive: true });
+  fs.writeFileSync(path.join(DIST, "index.html"), page);
+  let maps = 0;
+  for (const f of fs.readdirSync(MAPS_DIR).filter((f) => f.endsWith(".svg"))) {
+    fs.copyFileSync(path.join(MAPS_DIR, f), path.join(DIST, "maps", f));
+    maps++;
+  }
+  fs.writeFileSync(path.join(DIST, "_headers"), HEADERS);
+
+  const kb = Math.round(fs.statSync(path.join(DIST, "index.html")).size / 1024);
+  console.log(`Built dist/index.html (${kb} KB) and ${maps} maps`);
 }
 
 (async function main() {

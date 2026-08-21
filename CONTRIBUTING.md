@@ -25,6 +25,7 @@ build.js            downloads, reduces and assembles everything
 src/shell.html      markup and all styles
 src/app.js          scoring and UI
 data/               generated; committed so the site works when upstream is down
+dist/               the built site, committed so Cloudflare Pages can serve it directly
 ```
 
 ## House rules

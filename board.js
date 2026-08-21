@@ -28,9 +28,9 @@ const PORT = parseInt(opt("port", "8778"), 10);
 const LOGS = opt("logs", defaultLogRoot());
 const OPEN = !argv.includes("--no-open");
 
-const PAGE = path.join(__dirname, "tarkov-raid-board.local.html");
+const PAGE = path.join(__dirname, "dist", "index.html");
 if (!fs.existsSync(PAGE)) {
-  console.error("Missing tarkov-raid-board.local.html — run `node build.js` first.");
+  console.error("Missing dist/index.html — run `node build.js` first.");
   process.exit(1);
 }
 
@@ -118,7 +118,7 @@ const server = http.createServer((req, res) => {
 
   const map = url.match(/^\/maps\/([A-Za-z0-9_.-]+\.svg)$/);
   if (map) {
-    const file = path.join(__dirname, "data", "maps", map[1]);
+    const file = path.join(__dirname, "dist", "maps", map[1]);
     if (fs.existsSync(file)) {
       res.writeHead(200, { "Content-Type": "image/svg+xml", "Cache-Control": "max-age=86400" });
       return res.end(fs.readFileSync(file));
