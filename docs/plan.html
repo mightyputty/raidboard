@@ -113,7 +113,7 @@ footer{margin-top:64px; padding-top:20px; border-top:1px solid var(--line); colo
 <div class="wrap">
 
 <header class="top">
-  <div class="eyebrow"><span class="dot"></span><span class="lbl">Build plan &middot; raidboard.gg</span></div>
+  <div class="eyebrow"><span class="dot"></span><span class="lbl">Build plan &middot; raidboard.pages.dev</span></div>
   <h1>Shipping Raid Board</h1>
   <p class="thesis">Taking the local quest board public as a static site with no backend, plus a
   downloadable build &mdash; and adding wiki directions for all 517 quests, which is the thing no
@@ -121,15 +121,37 @@ footer{margin-top:64px; padding-top:20px; border-top:1px solid var(--line); colo
 </header>
 
 <dl class="locked">
-  <div><dt class="lbl">Name</dt><dd>Raid Board &middot; raidboard.gg</dd></div>
+  <div><dt class="lbl">Name</dt><dd>Raid Board &middot; raidboard.pages.dev</dd></div>
   <div><dt class="lbl">Hosting</dt><dd>Cloudflare Pages, static</dd></div>
   <div><dt class="lbl">Backend</dt><dd>None. Progress stays in the browser</dd></div>
   <div><dt class="lbl">Distribution</dt><dd>Hosted site plus a single .exe</dd></div>
   <div><dt class="lbl">Game modes</dt><dd>PVP and PVE, auto-detected</dd></div>
   <div><dt class="lbl">Licence</dt><dd>Open source on GitHub</dd></div>
   <div><dt class="lbl">Dropped</dt><dd>Kappa filters, Everything unlocked</dd></div>
-  <div><dt class="lbl">Sequence</dt><dd>Build it all, then launch</dd></div>
+  <div><dt class="lbl">State</dt><dd>All six stages shipped</dd></div>
 </dl>
+
+<section>
+  <h2>Where this got to</h2>
+  <p class="intro">All six stages are built, pushed and live. What follows is the plan as written;
+  this block is what actually happened, including where the plan turned out to be wrong.</p>
+  <div class="tw">
+    <table>
+      <thead><tr><th>Stage</th><th>State</th><th>What it came to</th></tr></thead>
+      <tbody>
+        <tr><td>1 &middot; Strip and open the repo</td><td class="yes">done</td><td>Kappa and the mode toggle gone, 194 lines lighter. Repo public at github.com/mightyputty/raidboard.</td></tr>
+        <tr><td>2 &middot; Split the payload, PVE</td><td class="yes">done</td><td>Guides moved to 394 lazy per-quest files. PVE merged: 550 quests, 26 and 23 exclusive. <strong>Core was not split</strong> &mdash; measured, and it buys nothing when the data rebuilds nightly.</td></tr>
+        <tr><td>3 &middot; Log reader in the browser</td><td class="yes">done</td><td>Directory picker plus IndexedDB handle. Type 11 read at last: three of your quests were failed and counted as active.</td></tr>
+        <tr><td>4 &middot; Guides for every quest</td><td class="yes">done</td><td>364 quests, 850 screenshots. Trader pages needed a different parser than the story chapters &mdash; flat sections, not per-objective headings.</td></tr>
+        <tr><td>5 &middot; Package the download</td><td class="yes">done</td><td>90 MB raidboard.exe, everything embedded. Verified running from a folder with no dist/ near it.</td></tr>
+        <tr><td>6 &middot; Make it survivable</td><td class="yes">done</td><td>Wipe detection that asks rather than acts, a blunt statement of what the app touches, nightly rebuild with a guard against shipping junk.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note"><strong>Live at <a href="https://raidboard.pages.dev">raidboard.pages.dev</a>.</strong>
+  The domain is still unbought &mdash; and worth deciding on soon, because progress is stored per
+  origin and moving later wipes everyone&rsquo;s hand-set ticks.</p>
+</section>
 
 <section>
   <h2>How one codebase serves both</h2>
