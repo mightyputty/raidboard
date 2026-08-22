@@ -51,8 +51,22 @@ node board.js --no-open                 do not launch a browser
 
 It runs happily alongside TarkovMonitor — both only read the same files.
 
-A hosted version and a one-file download that needs no Node install are both in progress. See
-[the build plan](docs/plan.html).
+### Or just download it
+
+`raidboard.exe` is the whole thing in one file — the board, the maps, every guide, and the log
+watcher. Double-click it and your browser opens. No Node, no install, no terminal.
+
+Windows will warn you about an unrecognised app the first time. That is unavoidable without a
+$200-a-year code signing certificate: the file is a copy of Node with the board injected into it,
+which invalidates Node’s own signature. The source is here and `npm run package` rebuilds it
+byte for byte if you would rather not take my word for it.
+
+Build it yourself with:
+
+```
+npm install
+npm run package
+```
 
 ## How the tracking works
 

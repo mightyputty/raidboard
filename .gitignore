@@ -5,3 +5,6 @@ node_modules/
 # local editor noise
 .DS_Store
 Thumbs.db
+
+# the packaged executable and its intermediates
+build/

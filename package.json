@@ -5,11 +5,22 @@
   "license": "MIT",
   "private": true,
   "type": "commonjs",
-  "engines": { "node": ">=18" },
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "start": "node board.js",
     "build": "node build.js",
-    "refresh": "node build.js --refresh"
+    "refresh": "node build.js --refresh",
+    "package": "node tools/pack.js"
   },
-  "keywords": ["escape-from-tarkov", "tarkov", "quests", "tracker"]
+  "keywords": [
+    "escape-from-tarkov",
+    "tarkov",
+    "quests",
+    "tracker"
+  ],
+  "devDependencies": {
+    "postject": "^1.0.0-alpha.6"
+  }
 }

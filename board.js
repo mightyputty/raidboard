@@ -27,8 +27,25 @@ const PORT = parseInt(opt("port", "8778"), 10);
 const LOGS = opt("logs", defaultLogRoot());
 const OPEN = !argv.includes("--no-open");
 
-const PAGE = path.join(__dirname, "dist", "index.html");
-if (!fs.existsSync(PAGE)) {
+/**
+ * The site is served either from the dist/ folder next to this script, or from a bundle baked
+ * into the executable. One function so the routes never have to care which.
+ */
+let BAKED = null;
+try {
+  const sea = require("node:sea");
+  if (sea.isSea()) {
+    BAKED = JSON.parse(require("zlib").gunzipSync(Buffer.from(sea.getAsset("site"))).toString("utf8"));
+  }
+} catch (e) { /* running from source, which is the normal case */ }
+
+function readAsset(rel) {
+  if (BAKED) return BAKED[rel] ? Buffer.from(BAKED[rel], "base64") : null;
+  const f = path.join(__dirname, "dist", rel);
+  try { return fs.readFileSync(f); } catch (e) { return null; }
+}
+
+if (!readAsset("index.html")) {
   console.error("Missing dist/index.html — run `node build.js` first.");
   process.exit(1);
 }
@@ -85,10 +102,10 @@ const server = http.createServer((req, res) => {
   // one guide file per quest, fetched when you open a Guide button
   const guide = url.match(/^\/guides\/([A-Za-z0-9]+\.json)$/);
   if (guide) {
-    const file = path.join(__dirname, "dist", "guides", guide[1]);
-    if (fs.existsSync(file)) {
+    const body = readAsset("guides/" + guide[1]);
+    if (body) {
       res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
-      return res.end(fs.readFileSync(file));
+      return res.end(body);
     }
     res.writeHead(404, { "Content-Type": "application/json" });
     return res.end('{"o":{},"x":{}}');
@@ -96,17 +113,16 @@ const server = http.createServer((req, res) => {
 
   const map = url.match(/^\/maps\/([A-Za-z0-9_.-]+\.svg)$/);
   if (map) {
-    const file = path.join(__dirname, "dist", "maps", map[1]);
-    if (fs.existsSync(file)) {
+    const body = readAsset("maps/" + map[1]);
+    if (body) {
       res.writeHead(200, { "Content-Type": "image/svg+xml", "Cache-Control": "max-age=86400" });
-      return res.end(fs.readFileSync(file));
+      return res.end(body);
     }
   }
 
   if (url === "/" || url === "/index.html") {
-    const body = fs.readFileSync(PAGE);
     res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
-    return res.end(body);
+    return res.end(readAsset("index.html"));
   }
 
   res.writeHead(404, { "Content-Type": "text/plain" });
