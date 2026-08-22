@@ -1,0 +1,56 @@
+name: Rebuild data
+
+# Quest data, story chapters and wiki guides all change under us. Rebuild nightly and commit
+# the result, so the site always serves a known-good copy even when tarkov.dev or the wiki is
+# down — the build failing must never be able to take the live site with it.
+on:
+  schedule:
+    - cron: "17 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: rebuild
+  cancel-in-progress: false
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Rebuild from upstream
+        run: node build.js --refresh
+
+      - name: Sanity check the result
+        run: |
+          node -e "
+            const fs = require('fs');
+            const d = JSON.parse(fs.readFileSync('data/tarkov-data.json', 'utf8'));
+            const quests = d.tasks.length;
+            const objectives = d.tasks.reduce((n, t) => n + (t.obj || []).length, 0);
+            const story = d.tasks.filter(t => t.story).length;
+            if (quests < 400) throw new Error('only ' + quests + ' quests — upstream looks broken, refusing to commit');
+            if (objectives < 1000) throw new Error('only ' + objectives + ' objectives — refusing to commit');
+            if (story < 8) throw new Error('only ' + story + ' story chapters — the wiki scrape looks broken');
+            if (!fs.existsSync('dist/index.html')) throw new Error('no dist/index.html');
+            console.log(quests + ' quests, ' + objectives + ' objectives, ' + story + ' story chapters');
+          "
+
+      - name: Commit if anything changed
+        run: |
+          git config user.name "raidboard-bot"
+          git config user.email "288972563+mightyputty@users.noreply.github.com"
+          if git diff --quiet; then
+            echo "No upstream changes today."
+            exit 0
+          fi
+          git add data dist
+          git commit -m "Nightly data rebuild"
+          git push
