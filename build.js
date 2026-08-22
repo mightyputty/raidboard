@@ -24,11 +24,14 @@ const DIST = path.join(ROOT, "dist");
 // must not be cached, or people sit on a stale board the day after a wipe.
 const HEADERS = `/maps/*
   Cache-Control: public, max-age=31536000, immutable
+/guides/*
+  Cache-Control: public, max-age=0, must-revalidate
 /index.html
   Cache-Control: public, max-age=0, must-revalidate
 /
   Cache-Control: public, max-age=0, must-revalidate
 `;
+
 const NOT_FOUND = `<!doctype html>
 <html lang="en">
 <head>
@@ -53,6 +56,7 @@ a{color:var(--accent)}
 </html>
 `;
 const BASE = "https://json.tarkov.dev/regular/";
+const PVE_BASE = "https://json.tarkov.dev/pve/";
 // tarkov.dev's quest-chain links are currently incomplete; this older community
 // dump still carries the chains for quests that existed in 2024, keyed by BSG id.
 const LEGACY_CHAINS = "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/quests.json";
@@ -85,12 +89,13 @@ function dedupeLoc(list, key) {
   });
 }
 
-async function grab(name) {
-  const res = await fetch(BASE + name, { headers: { "accept-encoding": "gzip" } });
+async function grabFrom(base, name) {
+  const res = await fetch(base + name, { headers: { "accept-encoding": "gzip" } });
   if (!res.ok) throw new Error(`${name}: HTTP ${res.status}`);
   const json = await res.json();
   return json.data || json;
 }
+const grab = (name) => grabFrom(BASE, name);
 
 async function refresh() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -98,11 +103,23 @@ async function refresh() {
   const [tasksRaw, tasksLoc, mapsRaw, mapsLoc, tradersRaw, tradersLoc, itemsRaw, itemsLoc] =
     await Promise.all(["tasks", "tasks_en", "maps", "maps_en", "traders", "traders_en", "items", "items_en"].map(grab));
 
+  // PVE is very nearly the same game: of ~540 quests only about 25 each way are exclusive, and
+  // every shared quest has identical objectives. So it is one list with the exclusives tagged,
+  // not two datasets.
+  let pveTasks = {}, pveLoc = {};
+  try {
+    const [pRaw, pLoc] = await Promise.all([grabFrom(PVE_BASE, "tasks"), grabFrom(PVE_BASE, "tasks_en")]);
+    pveTasks = pRaw.tasks || pRaw;
+    pveLoc = pLoc;
+  } catch (e) {
+    process.stdout.write("  PVE data unavailable (" + e.message + ") — shipping PVP only\n");
+  }
+
   const tasks = tasksRaw.tasks || tasksRaw;
   const mapsIn = mapsRaw.maps || mapsRaw;
   const traders = tradersRaw.traders || tradersRaw;
   const items = itemsRaw.items || itemsRaw;
-  const L = (k) => (k && (tasksLoc[k] || mapsLoc[k] || tradersLoc[k] || itemsLoc[k])) || k || null;
+  const L = (k) => (k && (tasksLoc[k] || pveLoc[k] || mapsLoc[k] || tradersLoc[k] || itemsLoc[k])) || k || null;
 
   const mapById = {};
   const canon = {};
@@ -164,8 +181,10 @@ async function refresh() {
   const traderName = (id) => { const t = traders[id]; return t ? (tradersLoc[t.name] || t.name) : null; };
 
   const out = [];
-  for (const id of Object.keys(tasks)) {
-    const t = tasks[id];
+  const havePve = Object.keys(pveTasks).length > 0;
+  const allIds = [...new Set([...Object.keys(tasks), ...Object.keys(pveTasks)])];
+  for (const id of allIds) {
+    const t = tasks[id] || pveTasks[id];
     const objs = (t.objectives || []).map((o) => {
       const mp = [...new Set((o.maps || []).map((m) => mapById[m]).filter(Boolean))];
       const r = { oi: o.id, d: L(o.description), ty: o.type };
@@ -212,6 +231,7 @@ async function refresh() {
 
     out.push({
       i: t.id,
+      md: havePve && !(tasks[id] && pveTasks[id]) ? (tasks[id] ? "v" : "e") : undefined,
       n: L(t.name),
       tr: traderName(t.trader),
       w: t.wikiLink || null,
@@ -338,10 +358,61 @@ async function fillChainGaps(tasks) {
   return filled;
 }
 
+/**
+ * Guides are the part of the dataset that grows without bound — every quest the wiki documents
+ * adds directions and a list of screenshots, and almost none of it is read on any given visit.
+ * So the page ships the core (which it needs to rank maps before you click anything) and fetches
+ * a quest's guide only when you open it. Core keeps just enough to draw the button: whether
+ * there is text, and how many pictures sit behind it.
+ */
+function splitGuides(data) {
+  const core = JSON.parse(JSON.stringify(data));
+  const guides = {};
+
+  for (const t of core.tasks) {
+    const objs = {};
+    for (const o of t.obj || []) {
+      const entry = {};
+      if (o.g) { entry.g = o.g; delete o.g; }
+      if (o.sh) { entry.sh = o.sh; delete o.sh; }
+      if (o.ig) { entry.ig = o.ig; delete o.ig; }
+      if (!Object.keys(entry).length) continue;
+      objs[o.oi] = entry;
+      if (entry.g) o.gt = 1;
+      const shots = (entry.sh ? entry.sh.length : 0) +
+        (entry.ig || []).reduce((n, x) => n + (x.sh ? x.sh.length : 0), 0);
+      if (shots) o.gn = shots;
+    }
+
+    // the labels stay in core so the rows render instantly; the prose and pictures go lazy
+    const extras = {};
+    const strip = (list, labelKey) => (list || []).map((x) => {
+      const e = {};
+      if (x.g) e.g = x.g;
+      if (x.sh) e.sh = x.sh;
+      extras[x.oi] = e;
+      const row = { oi: x.oi };
+      row[labelKey] = x[labelKey];
+      if (x.sh && x.sh.length) row.gn = x.sh.length;
+      if (x.g) row.gt = 1;
+      return row;
+    });
+    if (t.gx) t.gx = strip(t.gx, "h");
+    if (t.ix) t.ix = strip(t.ix, "n");
+
+    if (Object.keys(objs).length || Object.keys(extras).length) {
+      guides[t.i] = { o: objs, x: extras };
+    }
+  }
+  return { core: core, guides: guides };
+}
+
 function assemble() {
   const shell = fs.readFileSync(path.join(SRC, "shell.html"), "utf8");
   const app = fs.readFileSync(path.join(SRC, "app.js"), "utf8");
-  const data = fs.readFileSync(DATA_FILE, "utf8").replace(/</g, "\u003c");
+  const full = JSON.parse(fs.readFileSync(DATA_FILE, "utf8"));
+  const { core, guides } = splitGuides(full);
+  const data = JSON.stringify(core).replace(/</g, "\u003c");
 
   const body = shell +
     '\n<script id="tarkov-data" type="application/json">' + data + "</script>\n" +
@@ -355,8 +426,17 @@ function assemble() {
     body.slice(0, cut) + "\n</head>\n<body>\n" + body.slice(cut) + "\n</body>\n</html>\n";
 
   // dist/ is what gets served, locally and on the web — same bytes either way
+  fs.rmSync(path.join(DIST, "guides"), { recursive: true, force: true });
+  fs.mkdirSync(path.join(DIST, "guides"), { recursive: true });
   fs.mkdirSync(path.join(DIST, "maps"), { recursive: true });
   fs.writeFileSync(path.join(DIST, "index.html"), page);
+
+  let guideFiles = 0;
+  for (const id of Object.keys(guides)) {
+    fs.writeFileSync(path.join(DIST, "guides", id + ".json"), JSON.stringify(guides[id]));
+    guideFiles++;
+  }
+
   let maps = 0;
   for (const f of fs.readdirSync(MAPS_DIR).filter((f) => f.endsWith(".svg"))) {
     fs.copyFileSync(path.join(MAPS_DIR, f), path.join(DIST, "maps", f));
@@ -366,7 +446,7 @@ function assemble() {
   fs.writeFileSync(path.join(DIST, "404.html"), NOT_FOUND);
 
   const kb = Math.round(fs.statSync(path.join(DIST, "index.html")).size / 1024);
-  console.log(`Built dist/index.html (${kb} KB) and ${maps} maps`);
+  console.log(`Built dist/index.html (${kb} KB), ${guideFiles} guide files, ${maps} maps`);
 }
 
 (async function main() {

@@ -28,6 +28,9 @@ pin leaves the map straight away.
 location screenshots, captioned — six numbered spawn photos for a quest item that has six spawns,
 without leaving the page.
 
+**Covers PVP and PVE.** About 25 quests each way exist in only one mode; the Mode control in the
+header switches between them. Everything else is shared.
+
 **Tracks the story chapters.** Tour, Boreas, The Ticket and the other seven. No other tracker has
 these, because they are not in tarkov.dev's data at all — they are read from the wiki.
 
@@ -97,8 +100,8 @@ empty frame.
 only weakens the *Still gated* filter and the cascade when you mark a quest done. What is in your
 journal comes from your own logs and is unaffected.
 
-**PVE is not distinguished yet.** The quest list is the PVP one; the two differ by about 25 quests
-each way. PVE support is next.
+**Faction still has to be set by hand.** USEC and BEAR appear nowhere in the logs, so the Side
+control in the header is yours to set. Same for your level.
 
 ## Where the data comes from
 

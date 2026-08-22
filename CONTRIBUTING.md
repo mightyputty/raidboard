@@ -26,6 +26,7 @@ src/shell.html      markup and all styles
 src/app.js          scoring and UI
 data/               generated; committed so the site works when upstream is down
 dist/               the built site, committed so Cloudflare Pages can serve it directly
+dist/guides/        one file per quest, fetched only when a Guide button is opened
 ```
 
 ## House rules

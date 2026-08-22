@@ -116,6 +116,18 @@ const server = http.createServer((req, res) => {
     }
   }
 
+  // one guide file per quest, fetched when you open a Guide button
+  const guide = url.match(/^\/guides\/([A-Za-z0-9]+\.json)$/);
+  if (guide) {
+    const file = path.join(__dirname, "dist", "guides", guide[1]);
+    if (fs.existsSync(file)) {
+      res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
+      return res.end(fs.readFileSync(file));
+    }
+    res.writeHead(404, { "Content-Type": "application/json" });
+    return res.end('{"o":{},"x":{}}');
+  }
+
   const map = url.match(/^\/maps\/([A-Za-z0-9_.-]+\.svg)$/);
   if (map) {
     const file = path.join(__dirname, "dist", "maps", map[1]);

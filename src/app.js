@@ -23,6 +23,7 @@
   var S = {
     level: 15,
     faction: "Any",
+    gameMode: "pvp",
     sort: "total",
     theme: "system",
     map: null,
@@ -42,7 +43,7 @@
     if (!raw) return;
     try {
       var o = JSON.parse(raw);
-      ["level", "faction", "sort", "theme", "map", "autoFollow", "showExits"].forEach(function (k) {
+      ["level", "faction", "gameMode", "sort", "theme", "map", "autoFollow", "showExits"].forEach(function (k) {
         if (o[k] !== undefined && o[k] !== null) S[k] = o[k];
       });
       if (o.marks) S.marks = o.marks;
@@ -100,8 +101,13 @@
     return ok;
   }
 
+  // about 25 quests each way exist in only one mode; everything else runs in both
+  function inMode(t) {
+    return !t.md || t.md === (S.gameMode === "pve" ? "e" : "v");
+  }
+
   function inScope(t) {
-    return !isIgnored(t.i) && isActive(t.i);
+    return inMode(t) && !isIgnored(t.i) && isActive(t.i);
   }
 
   function openObjectives(t) {
@@ -463,7 +469,7 @@
       g.objs.map(function (o) {
         var done = !!S.objDone[o.oi];
         var n = numbers[o.oi];
-        var gd = guideBits(o);
+        var gd = guideBits(o, t.i);
         return '<div class="obj' + (done ? " done" : "") + (o.dp > 1 ? " sub" : "") +
           (o.hd ? " hd" : "") + '" data-row="' + esc(o.oi) + '">' +
           '<input class="tick" type="checkbox" data-obj="' + esc(o.oi) + '" id="o-' + esc(o.oi) + '"' +
@@ -479,7 +485,7 @@
   /** Ignored quests that would otherwise be on this map — shown, but counted nowhere. */
   function ignoredForMap(mapId) {
     return TASKS.filter(function (t) {
-      if (!isIgnored(t.i)) return false;
+      if (!isIgnored(t.i) || !inMode(t)) return false;
       return isActive(t.i);
     }).map(function (t) {
       var objs = openObjectives(t).filter(function (o) {
@@ -794,6 +800,7 @@
     var status = document.getElementById("q-status").value;
 
     var rows = TASKS.filter(function (t) {
+      if (!inMode(t)) return false;
       if (trader && t.tr !== trader) return false;
       if (map && t.maps.indexOf(map) < 0) return false;
       if (status === "done" && !isDone(t.i)) return false;
@@ -882,7 +889,8 @@
       "Quests, maps, keys and objectives come from <a href=\"https://tarkov.dev\" target=\"_blank\" rel=\"noopener\">tarkov.dev</a>, pulled " +
       esc(new Date(DATA.generated).toLocaleDateString()) + ": <strong>" + TASKS.length + " quests</strong>, " +
       TASKS.reduce(function (s, t) { return s + t.obj.length; }, 0) + " objectives, " + MAPS.length + " maps. " +
-      "This is the PVP list; PVE differs only in a few event quests." +
+      "Both PVP and PVE are included — about 25 quests each way are exclusive to one mode, " +
+      "and the Mode control in the header switches between them." +
       "<br><br>Story chapters and the guides behind every Guide button come from the " +
       "<a href=\"https://escapefromtarkov.fandom.com\" target=\"_blank\" rel=\"noopener\">Escape from Tarkov Wiki</a>, " +
       "used under CC BY-SA." +
@@ -892,21 +900,26 @@
       "what is in your journal comes from your own logs and is unaffected.";
   }
 
-  /** The wiki's own directions for one objective, plus the shots that go with them. */
-  function guideBits(o) {
-    var items = o.ig || [];
-    var own = o.sh ? o.sh.length : 0;
-    var extra = items.reduce(function (a, x) { return a + (x.sh ? x.sh.length : 0); }, 0);
-    if (!o.g && !own && !items.length) return { btn: "", panel: "" };
-    var total = own + extra;
+  // ---------- guides, fetched only when opened ----------
+  // Core ships two numbers per objective — is there text, how many pictures — which is all the
+  // button needs. The words and the screenshot list live in one file per quest, so the 500-odd
+  // quests nobody opens on a given visit cost nothing.
+  var guideCache = {};
+
+  function loadGuides(taskId) {
+    if (guideCache[taskId]) return Promise.resolve(guideCache[taskId]);
+    return fetch("guides/" + encodeURIComponent(taskId) + ".json", { cache: "force-cache" })
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error("no guide file")); })
+      .then(function (d) { guideCache[taskId] = d; return d; });
+  }
+
+  /** The button, plus the empty shell its content drops into once fetched. */
+  function guideBits(o, taskId) {
+    if (!o.gt && !o.gn) return { btn: "", panel: "" };
     return {
-      btn: '<button class="guideb" data-guide="' + esc(o.oi) + '" aria-pressed="false" ' +
-        'title="What to do and where">Guide' + (total ? " · " + total : "") + "</button>",
-      panel: '<div class="guide" data-guide-for="' + esc(o.oi) + '" hidden>' +
-        (o.g ? '<p class="guide-text">' + esc(o.g) + "</p>" : "") +
-        (own ? '<div class="shots" data-shots-for="' + esc(o.oi) + '"></div>' : "") +
-        items.map(itemGuide).join("") +
-        "</div>"
+      btn: '<button class="guideb" data-guide="' + esc(o.oi) + '" data-task="' + esc(taskId) + '" ' +
+        'aria-pressed="false" title="What to do and where">Guide' + (o.gn ? " · " + o.gn : "") + "</button>",
+      panel: '<div class="guide" data-guide-for="' + esc(o.oi) + '" hidden></div>'
     };
   }
 
@@ -918,26 +931,40 @@
       "</div>";
   }
 
-  /** Open it, and fetch every picture inside the first time only. */
-  function toggleGuide(oid, btn) {
-    var box = document.querySelector('[data-guide-for="' + oid + '"]');
-    if (!box) return;
-    var opening = box.hidden;
-    box.hidden = !opening;
-    btn.setAttribute("aria-pressed", opening ? "true" : "false");
-    if (!opening) return;
+  function drawGuide(box, oid, g) {
+    var items = g.ig || [];
+    var html =
+      (g.g ? '<p class="guide-text">' + esc(g.g) + "</p>" : "") +
+      (g.sh && g.sh.length ? '<div class="shots" data-shots-for="' + esc(oid) + '"></div>' : "") +
+      items.map(itemGuide).join("");
+    box.innerHTML = html || '<p class="shots-note">Nothing written for this one.</p>';
+    // pictures come from the local server, which caches them; hosted there is none yet
     [].forEach.call(box.querySelectorAll("[data-shots-for]"), function (grid) {
-      if (grid.dataset.loaded) return;
-      grid.dataset.loaded = "1";
       grid.innerHTML = '<p class="shots-note">Fetching the screenshots …</p>';
       fetch("api/wiki?task=" + encodeURIComponent(grid.getAttribute("data-shots-for")))
         .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error("no server")); })
         .then(function (d) { drawShots(grid, d); })
         .catch(function () {
-          grid.dataset.loaded = "";
-          grid.innerHTML = '<p class="shots-note">Could not reach the wiki. Try again when you are online.</p>';
+          grid.innerHTML = '<p class="shots-note">Screenshots need the downloadable version for now.</p>';
         });
     });
+  }
+
+  function toggleGuide(oid, taskId, btn) {
+    var box = document.querySelector('[data-guide-for="' + oid + '"]');
+    if (!box) return;
+    var opening = box.hidden;
+    box.hidden = !opening;
+    btn.setAttribute("aria-pressed", opening ? "true" : "false");
+    if (!opening || box.dataset.loaded) return;
+    box.dataset.loaded = "1";
+    box.innerHTML = '<p class="shots-note">Loading …</p>';
+    loadGuides(taskId)
+      .then(function (d) { drawGuide(box, oid, (d.o && d.o[oid]) || (d.x && d.x[oid]) || {}); })
+      .catch(function () {
+        box.dataset.loaded = "";
+        box.innerHTML = '<p class="shots-note">Could not load this guide.</p>';
+      });
   }
 
   // ---------- story chapters ----------
@@ -981,7 +1008,7 @@
       '<div class="story-bar"><i style="width:' + p.pct + '%"></i></div>' +
       '<div class="story-objs">' + t.obj.map(function (o) {
         var d = !!S.objDone[o.oi];
-        var gd = guideBits(o);
+        var gd = guideBits(o, t.i);
         return '<div class="obj' + (d ? " done" : "") + (o.dp > 1 ? " sub" : "") + (o.hd ? " hd" : "") +
           '" data-srow="' + esc(o.oi) + '">' +
           (o.hd
@@ -995,7 +1022,7 @@
       // guide sections the wiki writes against no single objective — kept rather than guessed at
       (extras.length
         ? '<div class="story-extra"><p class="lbl">Also in the guide</p>' + extras.map(function (x) {
-            var gd = guideBits({ oi: x.oi, g: x.g, sh: x.sh });
+            var gd = guideBits({ oi: x.oi, gt: x.gt, gn: x.gn }, t.i);
             return '<div class="obj"><span></span><label><span class="od">' + esc(x.h) +
               '</span><span class="oe"></span></label>' + (gd.btn || "<span></span>") + "</div>" + gd.panel;
           }).join("") + "</div>"
@@ -1003,7 +1030,7 @@
       // items the chapter needs whose directions live on the item's own page
       (items.length
         ? '<div class="story-extra"><p class="lbl">Where to find the items</p>' + items.map(function (x) {
-            var gd = guideBits({ oi: x.oi, g: x.g, sh: x.sh });
+            var gd = guideBits({ oi: x.oi, gt: x.gt, gn: x.gn }, t.i);
             return '<div class="obj"><span></span><label><span class="od">' + esc(x.n) +
               '</span><span class="oe"></span></label>' + (gd.btn || "<span></span>") + "</div>" + gd.panel;
           }).join("") + "</div>"
@@ -1052,7 +1079,7 @@
 
   document.getElementById("story-list").addEventListener("click", function (e) {
     var gb = e.target.closest("[data-guide]");
-    if (gb) { e.preventDefault(); toggleGuide(gb.getAttribute("data-guide"), gb); return; }
+    if (gb) { e.preventDefault(); toggleGuide(gb.getAttribute("data-guide"), gb.getAttribute("data-task"), gb); return; }
     var sb = e.target.closest("[data-shots]");
     if (sb) { e.preventDefault(); toggleShots(sb.getAttribute("data-shots"), sb); return; }
     var ig = e.target.closest("[data-ignore]");
@@ -1121,6 +1148,13 @@
   }
   document.getElementById("lvl").addEventListener("input", function () { setLevel(this.value); });
   document.getElementById("s-lvl").addEventListener("input", function () { setLevel(this.value); });
+
+  function setGameMode(v) {
+    S.gameMode = v === "pve" ? "pve" : "pvp";
+    document.getElementById("gamemode").value = S.gameMode;
+    persist(); resetMemo(); renderAll();
+  }
+  document.getElementById("gamemode").addEventListener("change", function () { setGameMode(this.value); });
 
   function setFaction(v) {
     S.faction = v;
@@ -1230,7 +1264,7 @@
 
   document.getElementById("map-objs").addEventListener("click", function (e) {
     var gb = e.target.closest("[data-guide]");
-    if (gb) { e.preventDefault(); toggleGuide(gb.getAttribute("data-guide"), gb); return; }
+    if (gb) { e.preventDefault(); toggleGuide(gb.getAttribute("data-guide"), gb.getAttribute("data-task"), gb); return; }
     var sb = e.target.closest("[data-shots]");
     if (sb) { e.preventDefault(); toggleShots(sb.getAttribute("data-shots"), sb); return; }
     var p = e.target.closest("[data-pin]");
@@ -1565,6 +1599,7 @@
   loadState();
   document.getElementById("lvl").value = S.level;
   document.getElementById("faction").value = S.faction;
+  document.getElementById("gamemode").value = S.gameMode;
   document.getElementById("theme").value = S.theme;
   if (S.theme !== "system") document.documentElement.setAttribute("data-theme", S.theme);
   document.getElementById("sort-total").setAttribute("aria-pressed", String(S.sort === "total"));
