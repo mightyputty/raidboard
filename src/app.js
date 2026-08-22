@@ -24,6 +24,7 @@
     level: 15,
     faction: "Any",
     gameMode: "pvp",
+    lastDone: undefined,
     sort: "total",
     theme: "system",
     map: null,
@@ -43,7 +44,7 @@
     if (!raw) return;
     try {
       var o = JSON.parse(raw);
-      ["level", "faction", "gameMode", "sort", "theme", "map", "autoFollow", "showExits"].forEach(function (k) {
+      ["level", "faction", "gameMode", "sort", "theme", "map", "autoFollow", "showExits", "lastDone"].forEach(function (k) {
         if (o[k] !== undefined && o[k] !== null) S[k] = o[k];
       });
       if (o.marks) S.marks = o.marks;
@@ -1448,11 +1449,54 @@
   // ---------- live: the game's own logs ----------
   // Only works when the page is served by `node board.js`; opened as a plain
   // file it just stays in manual mode and nothing below runs.
+  /**
+   * A wipe resets your journal in the game, and the logs follow, so log-driven tracking heals
+   * itself. What does not heal is anything you set by hand — those marks would sit there
+   * claiming quests are done that the new profile has never seen. We can spot the collapse but
+   * not the intent, so this asks rather than acting.
+   */
+  function checkForWipe() {
+    var el = document.getElementById("wipe-banner");
+    if (!el) return;
+    var c = logCounts();
+    var prev = S.lastDone;
+    var marks = Object.keys(S.marks).length;
+    var collapsed = prev !== undefined && prev >= 20 && c.done <= Math.max(2, Math.round(prev * 0.1));
+    if (collapsed && marks) {
+      el.hidden = false;
+      el.innerHTML = "Your completed quests went from <strong>" + prev + "</strong> to <strong>" +
+        c.done + "</strong>. If that was a wipe, the " + marks + " change" + (marks === 1 ? "" : "s") +
+        " you set by hand are now stale. " +
+        '<button class="linkish" data-wipe="clear">Clear them</button> or ' +
+        '<button class="linkish" data-wipe="keep">keep them</button>.';
+      return;                                    // leave lastDone alone until they answer
+    }
+    el.hidden = true;
+    if (c.done !== prev) { S.lastDone = c.done; persist(); }
+  }
+
+  document.getElementById("wipe-banner").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-wipe]");
+    if (!b) return;
+    if (b.dataset.wipe === "clear") {
+      S.marks = {};
+      S.objDone = {};
+      toast("Cleared. Your journal now comes purely from the logs.");
+    } else {
+      toast("Kept. They will keep overriding the logs.");
+    }
+    S.lastDone = logCounts().done;
+    persist();
+    document.getElementById("wipe-banner").hidden = true;
+    renderAll();
+  });
+
   function applySnapshot(snap) {
     LIVE = snap;
     LOG = snap.status || {};
     applyDetectedMode(snap.mode);
     setLivePill(true);
+    checkForWipe();
     renderRaid(snap.raid);
     if (snap.raid && snap.raid.state === "in-raid" && snap.raid.map && S.autoFollow) S.map = snap.raid.map;
   }

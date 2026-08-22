@@ -307,6 +307,7 @@ button.chip.unign:hover{border-style:solid; border-color:var(--good); color:var(
   <div class="banner raid" id="raid-banner" hidden style="margin-bottom:16px"></div>
   <section id="v-board" role="tabpanel" aria-labelledby="tab-board" class="stack">
     <div class="tiles" id="tiles"></div>
+    <div class="banner warn" id="wipe-banner" hidden></div>
     <div class="banner" id="empty-banner" hidden></div>
     <div class="card">
       <div class="card-h">
@@ -435,6 +436,23 @@ button.chip.unign:hover{border-style:solid; border-color:var(--good); color:var(
           <button class="chip" id="s-follow" aria-pressed="true">Follow me into raids</button>
           <button class="btn" id="s-clear-marks">Clear manual changes</button>
         </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h2>What this does to your machine</h2></div>
+      <div class="card-b">
+        <p class="note" style="margin:0">
+          <strong>Your logs are opened read-only.</strong> Nothing is ever written into the Escape from
+          Tarkov folder, no game memory is read, and nothing is injected into the game. This works the
+          same way TarkovMonitor does — by reading log files the game already writes for itself.
+          <br><br>
+          <strong>Your progress stays in this browser.</strong> There is no account and no server to
+          send it to. Use Export below if you want a copy.
+          <br><br>
+          <strong>One thing does leave your machine:</strong> opening a Guide loads its screenshots from
+          the Escape from Tarkov Wiki, so the wiki sees that request. Nothing about your account, your
+          progress or your logs goes with it.
+        </p>
       </div>
     </div>
     <div class="card">

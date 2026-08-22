@@ -449,6 +449,10 @@ function assemble() {
     '<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n' +
     '<meta name="viewport" content="width=device-width, initial-scale=1">\n' +
     '<meta name="description" content="Ranks Escape from Tarkov maps by how much quest progress a raid there is worth, and tells you what to bring.">\n' +
+    '<meta property="og:title" content="Raid Board">' + "\n" +
+    '<meta property="og:description" content="Which Tarkov raid is worth running right now, what to bring, and where to go once you land.">' + "\n" +
+    '<meta property="og:type" content="website">' + "\n" +
+    '<meta name="twitter:card" content="summary">' + "\n" +
     body.slice(0, cut) + "\n</head>\n<body>\n" + body.slice(cut) + "\n</body>\n</html>\n";
 
   // dist/ is what gets served, locally and on the web — same bytes either way
