@@ -19,7 +19,7 @@ plain `node build.js` while working on the UI.
 ```
 board.js            local server and log watcher
 lib/logs.js         reads the game's log files
-lib/wiki.js         fetches and caches wiki screenshots
+lib/guides.js       trader quest guides, scraped from the wiki
 lib/story.js        story chapters and their guides, scraped from the wiki
 build.js            downloads, reduces and assembles everything
 src/shell.html      markup and all styles

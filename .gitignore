@@ -2,9 +2,6 @@ node_modules/
 *.bak
 *.bak2
 
-# fetched from the wiki on demand and fully regenerable
-data/wiki/
-
 # local editor noise
 .DS_Store
 Thumbs.db

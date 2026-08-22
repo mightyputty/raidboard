@@ -463,10 +463,7 @@
           'title="Park it — drops off the board and out of every map plan">Ignore</button>') +
       // a story chapter has its shots split up per objective, so the whole-page dump is only
       // worth offering on trader quests, where that is all the wiki gives us
-      (t.story
-        ? ""
-        : '<button class="chip shotsb" data-shots="' + esc(t.i) + '" aria-pressed="false" ' +
-          'title="Location screenshots from the wiki">Screenshots</button>') +
+      questGuideBits(t).btn +
       "</span></div>" +
       g.objs.map(function (o) {
         var done = !!S.objDone[o.oi];
@@ -481,7 +478,7 @@
           esc(o.d) + '</span><span class="oe">' + objExtras(o, mapId) + "</span></label>" +
           (gd.btn || "<span></span>") + "</div>" + gd.panel;
       }).join("") +
-      (t.story ? "" : '<div class="shots" data-shots-for="' + esc(t.i) + '" hidden></div>') + "</div>";
+      questGuideBits(t).panel + "</div>";
   }
 
   /** Ignored quests that would otherwise be on this map — shown, but counted nowhere. */
@@ -926,8 +923,9 @@
 
   // ---------- guides, fetched only when opened ----------
   // Core ships two numbers per objective — is there text, how many pictures — which is all the
-  // button needs. The words and the screenshot list live in one file per quest, so the 500-odd
-  // quests nobody opens on a given visit cost nothing.
+  // button needs. The words and the screenshot URLs live in one file per quest, so the 500-odd
+  // quests nobody opens on a given visit cost nothing. Image URLs are resolved at build time so
+  // the hosted site can show them without a server to proxy through.
   var guideCache = {};
 
   function loadGuides(taskId) {
@@ -935,6 +933,22 @@
     return fetch("guides/" + encodeURIComponent(taskId) + ".json", { cache: "force-cache" })
       .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error("no guide file")); })
       .then(function (d) { guideCache[taskId] = d; return d; });
+  }
+
+  function shotGrid(list) {
+    if (!list || !list.length) return "";
+    return '<div class="shots"><div class="shots-grid">' + list.map(function (s) {
+      return '<a href="' + esc(s.u) + '" target="_blank" rel="noopener" title="Open full size">' +
+        '<img src="' + esc(s.u) + '" alt="' + esc(s.c || "screenshot") + '">' +
+        (s.c ? '<span class="shots-cap">' + esc(s.c) + "</span>" : "") + "</a>";
+    }).join("") + "</div></div>";
+  }
+
+  /** Where one item this objective wants actually spawns, off the item's own wiki page. */
+  function itemGuide(x) {
+    return '<div class="ig"><p class="ig-n">' + esc(x.n) + "</p>" +
+      (x.g ? '<p class="guide-text">' + esc(x.g) + "</p>" : "") +
+      shotGrid(x.sh) + "</div>";
   }
 
   /** The button, plus the empty shell its content drops into once fetched. */
@@ -947,31 +961,23 @@
     };
   }
 
-  /** Where one item this objective wants actually spawns, off the item's own wiki page. */
-  function itemGuide(x) {
-    return '<div class="ig"><p class="ig-n">' + esc(x.n) + "</p>" +
-      (x.g ? '<p class="guide-text">' + esc(x.g) + "</p>" : "") +
-      (x.sh && x.sh.length ? '<div class="shots" data-shots-for="' + esc(x.oi) + '"></div>' : "") +
-      "</div>";
+  /** Most trader quest pages write one guide for the whole quest rather than per step. */
+  function questGuideBits(t) {
+    if (!t.qgt && !t.qgn) return { btn: "", panel: "" };
+    return {
+      btn: '<button class="chip guideb" data-guide="' + esc(t.i) + '" data-task="' + esc(t.i) + '" ' +
+        'aria-pressed="false" title="The wiki\u2019s guide for this quest">Guide' +
+        (t.qgn ? " · " + t.qgn : "") + "</button>",
+      panel: '<div class="guide" data-guide-for="' + esc(t.i) + '" hidden></div>'
+    };
   }
 
-  function drawGuide(box, oid, g) {
-    var items = g.ig || [];
+  function drawGuide(box, g) {
     var html =
       (g.g ? '<p class="guide-text">' + esc(g.g) + "</p>" : "") +
-      (g.sh && g.sh.length ? '<div class="shots" data-shots-for="' + esc(oid) + '"></div>' : "") +
-      items.map(itemGuide).join("");
+      shotGrid(g.sh) +
+      (g.ig || []).map(itemGuide).join("");
     box.innerHTML = html || '<p class="shots-note">Nothing written for this one.</p>';
-    // pictures come from the local server, which caches them; hosted there is none yet
-    [].forEach.call(box.querySelectorAll("[data-shots-for]"), function (grid) {
-      grid.innerHTML = '<p class="shots-note">Fetching the screenshots …</p>';
-      fetch("api/wiki?task=" + encodeURIComponent(grid.getAttribute("data-shots-for")))
-        .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error("no server")); })
-        .then(function (d) { drawShots(grid, d); })
-        .catch(function () {
-          grid.innerHTML = '<p class="shots-note">Screenshots need the downloadable version for now.</p>';
-        });
-    });
   }
 
   function toggleGuide(oid, taskId, btn) {
@@ -982,9 +988,12 @@
     btn.setAttribute("aria-pressed", opening ? "true" : "false");
     if (!opening || box.dataset.loaded) return;
     box.dataset.loaded = "1";
-    box.innerHTML = '<p class="shots-note">Loading …</p>';
+    box.innerHTML = '<p class="shots-note">Loading \u2026</p>';
     loadGuides(taskId)
-      .then(function (d) { drawGuide(box, oid, (d.o && d.o[oid]) || (d.x && d.x[oid]) || {}); })
+      .then(function (d) {
+        var g = (oid === taskId ? d.q : null) || (d.o && d.o[oid]) || (d.x && d.x[oid]) || {};
+        drawGuide(box, g);
+      })
       .catch(function () {
         box.dataset.loaded = "";
         box.innerHTML = '<p class="shots-note">Could not load this guide.</p>';
@@ -1104,8 +1113,6 @@
   document.getElementById("story-list").addEventListener("click", function (e) {
     var gb = e.target.closest("[data-guide]");
     if (gb) { e.preventDefault(); toggleGuide(gb.getAttribute("data-guide"), gb.getAttribute("data-task"), gb); return; }
-    var sb = e.target.closest("[data-shots]");
-    if (sb) { e.preventDefault(); toggleShots(sb.getAttribute("data-shots"), sb); return; }
     var ig = e.target.closest("[data-ignore]");
     if (ig) {
       var iid = ig.getAttribute("data-ignore");
@@ -1289,44 +1296,9 @@
   document.getElementById("map-objs").addEventListener("click", function (e) {
     var gb = e.target.closest("[data-guide]");
     if (gb) { e.preventDefault(); toggleGuide(gb.getAttribute("data-guide"), gb.getAttribute("data-task"), gb); return; }
-    var sb = e.target.closest("[data-shots]");
-    if (sb) { e.preventDefault(); toggleShots(sb.getAttribute("data-shots"), sb); return; }
     var p = e.target.closest("[data-pin]");
     if (p) { e.preventDefault(); highlightPin(p.dataset.pin, true); }
   });
-
-  // ---------- wiki location screenshots ----------
-  // The server fetches these once and keeps them on disk, so the page never talks to the
-  // wiki itself and they still work the next time with no connection.
-  function toggleShots(id, btn) {
-    var box = document.querySelector('[data-shots-for="' + id + '"]');
-    if (!box) return;
-    var opening = box.hidden;
-    box.hidden = !opening;
-    btn.setAttribute("aria-pressed", opening ? "true" : "false");
-    if (!opening || box.dataset.loaded) return;
-    box.dataset.loaded = "1";
-    box.innerHTML = '<p class="shots-note">Fetching from the wiki …</p>';
-    fetch("api/wiki?task=" + encodeURIComponent(id))
-      .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error("no server")); })
-      .then(function (d) { drawShots(box, d); })
-      .catch(function () {
-        box.dataset.loaded = "";
-        box.innerHTML = '<p class="shots-note">Could not reach the wiki. Try again when you are online.</p>';
-      });
-  }
-
-  function drawShots(box, d) {
-    if (!d.shots || !d.shots.length) {
-      box.innerHTML = '<p class="shots-note">The wiki has no location shots for this one.</p>';
-      return;
-    }
-    box.innerHTML = '<div class="shots-grid">' + d.shots.map(function (s) {
-      return '<a href="wiki/' + esc(s.f) + '" target="_blank" rel="noopener" title="Open full size">' +
-        '<img src="wiki/' + esc(s.f) + '" alt="' + esc(s.n) + '">' +
-        '<span class="shots-cap">' + esc(s.n) + "</span></a>";
-    }).join("") + "</div>";
-  }
 
   // ---------- what you are pointing at on the map ----------
   (function () {

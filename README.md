@@ -24,9 +24,10 @@ numbered, using the actual in-game coordinates rather than a screenshot someone 
 drawn as their true polygon, so a pin shows the area the game accepts. Tick an objective off and its
 pin leaves the map straight away.
 
-**Gives you the wiki's directions inline.** Objectives carry the wiki's own instructions and its
-location screenshots, captioned — six numbered spawn photos for a quest item that has six spawns,
-without leaving the page.
+**Gives you the wiki's directions inline.** 364 quests carry the wiki's own guide and its location
+screenshots, captioned, behind a Guide button — *"The docs under the bed of cabin #3"* with the
+picture to match, without leaving the page. Story chapters go further and attach directions to
+individual objectives.
 
 **Covers PVP and PVE.** About 25 quests each way exist in only one mode; the Mode control in the
 header switches between them. Everything else is shared.
@@ -105,8 +106,12 @@ real coordinates — the go-to-this-spot kinds.
 **Three maps have no drawing.** The Lab, The Labyrinth and Icebreaker say so rather than showing an
 empty frame.
 
-**Some quests have no guide.** The wiki has not written one for every objective, and that reads as
-*nothing written for this one* rather than as a broken feature.
+**Not every quest has a guide.** 364 of 540 do. The wiki has not written one for the rest, and that
+reads as *nothing written for this one* rather than as a broken feature.
+
+**Screenshots come from the wiki's servers.** They are hotlinked from the Escape from Tarkov Wiki's
+CDN, so opening a guide is the one thing in the app that reaches outside your machine. Your logs
+and your progress never do.
 
 **136 quests are missing their unlock chain** upstream at tarkov.dev, mostly recent additions. That
 only weakens the *Still gated* filter and the cascade when you mark a quest done. What is in your

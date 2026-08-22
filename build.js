@@ -13,6 +13,7 @@
 const fs = require("fs");
 const path = require("path");
 const { fetchStory } = require("./lib/story");
+const { fetchQuestGuides, resolveImages } = require("./lib/guides");
 
 const ROOT = __dirname;
 const SRC = path.join(ROOT, "src");
@@ -265,6 +266,22 @@ async function refresh() {
       story.chapters.reduce((n, c) => n + c.obj.length, 0) + " objectives (hand-ticked)\n");
   }
 
+  // The wedge: the wiki has directions and location shots for most trader quests, and no other
+  // tracker surfaces them. Costs about a dozen API calls because titles batch 45 at a time.
+  try {
+    const g = await fetchQuestGuides(out);
+    console.log("  quest guides: " + g.quests + " quests, " + g.objectives + " per-objective" +
+      (g.missing ? ", " + g.missing + " wiki pages missing" : ""));
+  } catch (e) {
+    console.log("  quest guides skipped (" + e.message + ")");
+  }
+  try {
+    const r = await resolveImages(out);
+    console.log("  screenshots: " + r.resolved + " of " + r.asked + " resolved");
+  } catch (e) {
+    console.log("  image resolution skipped (" + e.message + ")");
+  }
+
   out.sort((a, b) => (a.tr || "").localeCompare(b.tr || "") || a.lvl - b.lvl || a.n.localeCompare(b.n));
 
   const payload = {
@@ -371,6 +388,13 @@ function splitGuides(data) {
 
   for (const t of core.tasks) {
     const objs = {};
+    let quest = null;
+    if (t.qg) {
+      quest = t.qg;
+      if (t.qg.g) t.qgt = 1;
+      if (t.qg.sh && t.qg.sh.length) t.qgn = t.qg.sh.length;
+      delete t.qg;
+    }
     for (const o of t.obj || []) {
       const entry = {};
       if (o.g) { entry.g = o.g; delete o.g; }
@@ -400,8 +424,8 @@ function splitGuides(data) {
     if (t.gx) t.gx = strip(t.gx, "h");
     if (t.ix) t.ix = strip(t.ix, "n");
 
-    if (Object.keys(objs).length || Object.keys(extras).length) {
-      guides[t.i] = { o: objs, x: extras };
+    if (quest || Object.keys(objs).length || Object.keys(extras).length) {
+      guides[t.i] = { q: quest, o: objs, x: extras };
     }
   }
   return { core: core, guides: guides };

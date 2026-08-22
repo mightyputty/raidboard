@@ -16,7 +16,6 @@ const fs = require("fs");
 const path = require("path");
 const { exec } = require("child_process");
 const { LogWatcher, defaultLogRoot } = require("./lib/logs");
-const { WikiShots, pagesFromData, shotsFromData } = require("./lib/wiki");
 
 
 const argv = process.argv.slice(2);
@@ -59,13 +58,6 @@ function broadcast(event, data) {
 watcher.on("quest", (q) => { if (q.fresh) broadcast("quest", q); });
 watcher.on("raid", (r) => broadcast("raid", r));
 
-const DATA_FILE = path.join(__dirname, "data", "tarkov-data.json");
-const wiki = new WikiShots(
-  path.join(__dirname, "data", "wiki"),
-  pagesFromData(DATA_FILE),
-  shotsFromData(DATA_FILE)
-);
-
 const server = http.createServer((req, res) => {
 
   const url = req.url.split("?")[0];
@@ -88,32 +80,6 @@ const server = http.createServer((req, res) => {
     const ping = setInterval(() => { try { res.write(": ping\n\n"); } catch (e) {} }, 25000);
     req.on("close", () => { clearInterval(ping); clients.delete(res); });
     return;
-  }
-
-  // Wiki location screenshots. The browser only ever asks us for a quest id; we hold the
-  // list of pages, so a page it made up cannot send us anywhere.
-  if (url === "/api/wiki") {
-    const q = /[?&]task=([A-Za-z0-9]+)/.exec(req.url);
-    const send = (body) => {
-      res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
-      res.end(JSON.stringify(body));
-    };
-    if (!q) return send({ shots: [] });
-    wiki.get(q[1]).then(send, () => send({ shots: [], error: "lookup failed" }));
-    return;
-  }
-
-  const shot = url.match(/^\/wiki\/([a-f0-9]{16}\.(?:png|jpe?g|gif|webp))$/);
-  if (shot) {
-    const file = path.join(__dirname, "data", "wiki", shot[1]);
-    if (fs.existsSync(file)) {
-      const ext = shot[1].split(".").pop();
-      res.writeHead(200, {
-        "Content-Type": ext === "png" ? "image/png" : ext === "gif" ? "image/gif" : ext === "webp" ? "image/webp" : "image/jpeg",
-        "Cache-Control": "max-age=604800"
-      });
-      return res.end(fs.readFileSync(file));
-    }
   }
 
   // one guide file per quest, fetched when you open a Guide button
