@@ -371,6 +371,7 @@ button.chip.unign:hover{border-style:solid; border-color:var(--good); color:var(
           <option value="unlocked">Ready to pick up</option>
           <option value="locked">Still gated</option>
           <option value="done">Completed</option>
+          <option value="failed">Failed</option>
           <option value="ignored">Ignored</option>
           <option value="all">All</option>
         </select>
@@ -429,6 +430,8 @@ button.chip.unign:hover{border-style:solid; border-color:var(--good); color:var(
         <p class="note" id="log-note" style="margin:0 0 12px"></p>
         <div class="btnrow">
           <button class="btn primary" id="s-sync">Sync from logs</button>
+          <button class="btn" id="s-connect" hidden>Connect log folder</button>
+          <button class="btn" id="s-forget" hidden>Forget folder</button>
           <button class="chip" id="s-follow" aria-pressed="true">Follow me into raids</button>
           <button class="btn" id="s-clear-marks">Clear manual changes</button>
         </div>

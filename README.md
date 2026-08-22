@@ -55,8 +55,20 @@ A hosted version and a one-file download that needs no Node install are both in 
 
 ## How the tracking works
 
-Two chat messages in `push-notifications_*.log` carry quest state. When a trader hands you a
-briefing the client logs a message of type **10**; when you turn a quest in it logs type **12**.
+There are two ways to get your journal in, and the board picks whichever is available.
+
+**Running it locally**, the watcher reads the logs in the background whether or not the page is
+open, in any browser, with no permission prompt.
+
+**On the hosted site**, the page asks for your `Logs` folder once through the browser's folder
+picker and remembers it. It reads while the tab is open. Nothing is uploaded — on a static site
+there is no server to upload to. Chrome and Edge support this; Firefox does not, and falls back
+to ticking by hand.
+
+Three chat messages in `push-notifications_*.log` carry quest state. When a trader hands you a
+briefing the client logs a message of type **10**; when you turn a quest in it logs type **12**;
+and when one fails it logs type **11**. That last one is worth knowing about — the message's own
+`text` field still reads *quest started* on a failure, so only the type tells the truth.
 Latest event per quest wins, so accept-then-complete resolves correctly. Neither field is documented
 by Battlestate, but both have been stable, and together they reconstruct your journal exactly.
 

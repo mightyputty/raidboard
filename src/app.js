@@ -69,6 +69,8 @@
   }
   function isDone(id) { return statusOf(id) === "d"; }
   function isActive(id) { return statusOf(id) === "a"; }
+  // a quest you failed is neither active nor done — out of the running until BSG resets it
+  function isFailed(id) { return statusOf(id) === "f"; }
   function isIgnored(id) { return !!S.ignored[id]; }
   function isOverridden(id) {
     return S.marks[id] !== undefined && S.marks[id] !== (LOG[id] || "");
@@ -804,6 +806,7 @@
       if (trader && t.tr !== trader) return false;
       if (map && t.maps.indexOf(map) < 0) return false;
       if (status === "done" && !isDone(t.i)) return false;
+      if (status === "failed" && !isFailed(t.i)) return false;
       if (status === "active" && !isActive(t.i)) return false;
       if (status === "unlocked" && !isUnlocked(t)) return false;
       if (status === "locked" && (isDone(t.i) || isUnlocked(t))) return false;
@@ -834,6 +837,7 @@
         (maps.length ? '<span class="chip" title="' + esc(allMaps.join(", ")) + '">' + esc(maps.join(" / ")) + "</span>" : "") +
         (locked ? '<span class="chip">Locked</span>' : "") +
         (ign ? '<span class="chip warnc">Ignored</span>' : "") +
+        (isFailed(t.i) ? '<span class="chip crit" title="the game logged this as failed">Failed</span>' : "") +
         (isOverridden(t.i) ? '<span class="chip crit" title="you set this by hand; the game logs say otherwise">manual</span>' : "") +
         (t.w ? '<a class="chip" href="' + esc(t.w) + '" target="_blank" rel="noopener">Wiki</a>' : "") +
         "</div></div>" +
@@ -871,19 +875,39 @@
       : "This page cannot save to browser storage here — copy a backup before closing the tab.";
 
     var marks = Object.keys(S.marks).length;
-    document.getElementById("log-state").textContent = LIVE ? "Connected" : "Not connected";
-    document.getElementById("log-note").innerHTML = LIVE
-      ? "Read straight from Escape from Tarkov's own log files — <strong>" + logCounts().active +
-        " active</strong> and <strong>" + logCounts().done + " completed</strong> quests across " +
-        LIVE.sessions + " game sessions" +
-        (logCounts().unknown ? " (plus " + logCounts().unknown + " retired or event quests this board does not list)" : "") +
-        (LIVE.range.from ? ", going back to " + esc(new Date(LIVE.range.from).toLocaleDateString()) : "") + ".<br><br>" +
+    var c = logCounts();
+    var canPick = !!(window.RaidLogs && RaidLogs.supported);
+    var connect = document.getElementById("s-connect");
+    var forget = document.getElementById("s-forget");
+    if (connect) connect.hidden = SOURCE === "server" || !canPick;
+    if (forget) forget.hidden = SOURCE !== "folder";
+
+    document.getElementById("log-state").textContent =
+      SOURCE === "folder" ? "Reading your Logs folder" : SOURCE === "server" ? "Connected" : "Not connected";
+
+    var journal = SOURCE
+      ? "<strong>" + c.active + " active</strong>, <strong>" + c.done + " completed</strong>" +
+        (c.failed ? " and <strong>" + c.failed + " failed</strong>" : "") + " quests" +
+        (LIVE && LIVE.sessions ? " across " + LIVE.sessions + " game sessions" : "") +
+        (c.unknown ? " (plus " + c.unknown + " retired or event quests this board does not list)" : "") + ".<br><br>" +
         "The logs only reach as far back as the folders the game has kept, so anything you finished " +
-        "before then shows as not started. Fix those by hand in Quests — your changes always win over the logs" +
-        (marks ? " (" + marks + " set so far)" : "") + "."
-      : "Not reading your game logs. Start the board with <code>node board.js</code> instead of opening the " +
-        "file directly and it will fill in your journal from Escape from Tarkov's own logs, then follow you " +
-        "into raids live.";
+        "before then shows as not started. Fix those by hand in Quests — your changes always win over " +
+        "the logs" + (marks ? " (" + marks + " set so far)" : "") + "."
+      : "";
+
+    document.getElementById("log-note").innerHTML =
+      SOURCE === "server"
+        ? "Read straight from Escape from Tarkov's own log files by the local watcher, which keeps " +
+          "reading in the background whether or not this tab is open. " + journal
+      : SOURCE === "folder"
+        ? "This tab is reading your Logs folder directly. Nothing is uploaded — there is no server to " +
+          "upload to. It reads while the tab is open, so leave it open during a session. " + journal
+      : canPick
+        ? "Point the board at your Escape from Tarkov <code>Logs</code> folder and it fills in your " +
+          "journal from the game's own files. You pick the folder once; the browser remembers it. " +
+          "It is opened read-only and nothing leaves your machine."
+        : "This browser cannot open a folder, so your journal has to be ticked by hand in Quests. " +
+          "Chrome and Edge can do it, and the downloadable version works in any browser.";
     document.getElementById("s-follow").setAttribute("aria-pressed", String(!!S.autoFollow));
     document.getElementById("prov").innerHTML =
       "Quests, maps, keys and objectives come from <a href=\"https://tarkov.dev\" target=\"_blank\" rel=\"noopener\">tarkov.dev</a>, pulled " +
@@ -1455,6 +1479,7 @@
   function applySnapshot(snap) {
     LIVE = snap;
     LOG = snap.status || {};
+    applyDetectedMode(snap.mode);
     setLivePill(true);
     renderRaid(snap.raid);
     if (snap.raid && snap.raid.state === "in-raid" && snap.raid.map && S.autoFollow) S.map = snap.raid.map;
@@ -1462,12 +1487,14 @@
 
   /** Count only quests this board knows about — the logs also mention retired event quests. */
   function logCounts() {
-    var active = 0, done = 0, unknown = 0;
+    var active = 0, done = 0, failed = 0, unknown = 0;
     Object.keys(LOG).forEach(function (id) {
       if (!BY_ID[id]) { unknown++; return; }
-      if (LOG[id] === "d") done++; else active++;
+      if (LOG[id] === "d") done++;
+      else if (LOG[id] === "f") failed++;
+      else active++;
     });
-    return { active: active, done: done, unknown: unknown };
+    return { active: active, done: done, failed: failed, unknown: unknown };
   }
 
   function setLivePill(ok) {
@@ -1498,16 +1525,45 @@
     if (b) tab(b.dataset.goto);
   });
 
+  // ---------- where log lines come from ----------
+  // Three possibilities, same snapshot shape out of all of them: the local watcher (background
+  // polling, any browser), a folder handle the browser holds (hosted, Chromium only), or nothing
+  // at all, which is manual ticking like every other tracker.
+  var SOURCE = null;
+  var FOLDER = null;
+  var folderTimer = null;
+
+  function sourceLabel() {
+    return SOURCE === "folder" ? "your Logs folder" : SOURCE === "server" ? "the log watcher" : "nothing";
+  }
+
+  /** The game decides which mode you are in; the header control is only for people with no logs. */
+  function applyDetectedMode(mode) {
+    if (!mode || mode === S.gameMode) return;
+    S.gameMode = mode;
+    var sel = document.getElementById("gamemode");
+    if (sel) sel.value = mode;
+    persist();
+    resetMemo();
+    toast("Switched to " + mode.toUpperCase() + " — that is what your logs say");
+  }
+
   var syncing = false;
-  /** Pull the watcher's current view of the logs. `deep` re-reads every session folder. */
+  /** Re-read everything the current source knows. */
   function syncFromLogs(deep, quiet) {
-    if (syncing) return Promise.resolve();
+    if (syncing || !SOURCE) {
+      if (!SOURCE && !quiet) toast("Not reading any logs yet — connect them in Setup");
+      return Promise.resolve();
+    }
     syncing = true;
     var btns = [document.getElementById("live-pill"), document.getElementById("s-sync-top")]
       .filter(Boolean);
     btns.forEach(function (b) { b.classList.add("busy"); });
-    return fetch("api/state" + (deep ? "?rescan=1" : ""), { cache: "no-store" })
-      .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error("no watcher")); })
+    var job = SOURCE === "folder"
+      ? RaidLogs.scan(FOLDER, false)
+      : fetch("api/state" + (deep ? "?rescan=1" : ""), { cache: "no-store" })
+          .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error("no watcher")); });
+    return job
       .then(function (snap) {
         var was = JSON.stringify(LOG);
         applySnapshot(snap);
@@ -1516,65 +1572,149 @@
           var c = logCounts();
           toast(was === JSON.stringify(LOG)
             ? "Already up to date — " + c.active + " active, " + c.done + " done"
-            : "Synced from your logs — " + c.active + " active, " + c.done + " done");
+            : "Synced — " + c.active + " active, " + c.done + " done");
         }
       })
-      .catch(function () { if (!quiet) toast("Could not reach the log watcher"); setLivePill(false); })
+      .catch(function () { if (!quiet) toast("Could not read " + sourceLabel()); setLivePill(false); })
       .then(function () {
         syncing = false;
         btns.forEach(function (b) { b.classList.remove("busy"); });
       });
   }
 
+  /** Poll the session the game is writing to and fold anything new into what we already have. */
+  function startFolderPolling() {
+    if (folderTimer) clearInterval(folderTimer);
+    folderTimer = setInterval(function () {
+      if (document.hidden || !FOLDER) return;
+      RaidLogs.scan(FOLDER, true).then(function (snap) {
+        var changed = false;
+        Object.keys(snap.status || {}).forEach(function (id) {
+          if (LOG[id] === snap.status[id]) return;
+          LOG[id] = snap.status[id];
+          changed = true;
+          // the game just told us what happened, so drop any stale hand-set value
+          if (S.marks[id] !== undefined && S.marks[id] !== snap.status[id]) { delete S.marks[id]; persist(); }
+          var t = BY_ID[id];
+          if (t) toast((snap.status[id] === "d" ? "Completed: " : snap.status[id] === "f" ? "Failed: " : "Accepted: ") + t.n);
+        });
+        applyDetectedMode(snap.mode);
+        if (snap.raid && (!LIVE || !LIVE.raid || snap.raid.at >= LIVE.raid.at)) {
+          if (LIVE) LIVE.raid = snap.raid;
+          renderRaid(snap.raid);
+          if (snap.raid.state === "in-raid" && snap.raid.map && S.autoFollow && S.map !== snap.raid.map) {
+            S.map = snap.raid.map; persist(); changed = true; tab("map");
+          }
+        }
+        if (changed) { setLivePill(true); renderAll(); }
+      }).catch(function () { /* folder went away or permission lapsed; the pill will say so */ });
+    }, 8000);
+  }
+
+  function useFolder(dir, announce) {
+    FOLDER = dir;
+    SOURCE = "folder";
+    return RaidLogs.scan(dir, false).then(function (snap) {
+      applySnapshot(snap);
+      renderAll();
+      startFolderPolling();
+      dirty.setup = true;
+      renderCurrent();
+      if (announce) {
+        var c = logCounts();
+        toast("Reading your logs — " + c.active + " active, " + c.done + " done");
+      }
+    });
+  }
+
+  /** Only ever called from a click, because the picker requires a gesture. */
+  function connectFolder() {
+    if (!window.RaidLogs || !RaidLogs.supported) {
+      toast("This browser cannot open a folder — use Chrome or Edge, or the downloadable version");
+      return;
+    }
+    RaidLogs.pick()
+      .then(function (dir) { return useFolder(dir, true); })
+      .catch(function () { toast("No folder chosen"); });
+  }
+
+  function forgetFolder() {
+    if (folderTimer) { clearInterval(folderTimer); folderTimer = null; }
+    FOLDER = null;
+    if (SOURCE === "folder") { SOURCE = null; LIVE = null; LOG = {}; }
+    RaidLogs.forget().then(function () {
+      setLivePill(false);
+      dirty.setup = true;
+      renderAll();
+      toast("Forgotten. Your ticks are untouched.");
+    });
+  }
+
   function connectLive() {
     if (!window.fetch || !/^https?:/.test(location.protocol)) return;
+    // the local watcher wins when it is there: it polls in the background and needs no permission
     fetch("api/state", { cache: "no-store" })
       .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error("no watcher")); })
       .then(function (snap) {
+        SOURCE = "server";
         applySnapshot(snap);
         renderAll();
-        var src = new EventSource("api/events");
-        var firstOpen = true;
-        src.onopen = function () {
-          // a reconnect means the page missed whatever happened while it was down
-          if (firstOpen) { firstOpen = false; return; }
-          syncFromLogs(true, true);
-        };
-        src.addEventListener("quest", function (ev) {
-          var q = JSON.parse(ev.data);
-          LOG[q.id] = q.status;
-          // the game just told us what happened, so drop any stale hand-set value
-          if (S.marks[q.id] !== undefined && S.marks[q.id] !== q.status) {
-            delete S.marks[q.id];
-            persist();
-          }
-          setLivePill(true);
-          var t = BY_ID[q.id];
-          if (t) toast((q.status === "d" ? "Completed: " : "Accepted: ") + t.n);
-          renderAll();
-        });
-        src.addEventListener("raid", function (ev) {
-          var raid = JSON.parse(ev.data);
-          if (LIVE) LIVE.raid = raid;
-          renderRaid(raid);
-          if (raid.state === "in-raid" && raid.map && S.autoFollow) {
-            S.map = raid.map;
-            persist();
-            renderAll();
-            tab("map");
-            var m = MAP_BY_ID[raid.map];
-            toast("Heading into " + (m ? m.name : raid.map) + " — plan open");
-          }
-        });
-        src.onerror = function () { setLivePill(false); };
+        watchServerEvents();
       })
-      .catch(function () { /* no watcher: manual mode, which is the normal file:// case */ });
+      .catch(function () {
+        if (!window.RaidLogs || !RaidLogs.supported) { dirty.setup = true; renderCurrent(); return; }
+        RaidLogs.restore().then(function (dir) {
+          if (dir) return useFolder(dir, false);
+          dirty.setup = true;
+          renderCurrent();
+        }).catch(function () {});
+      });
+  }
+
+  function watchServerEvents() {
+    var src = new EventSource("api/events");
+    var firstOpen = true;
+    src.onopen = function () {
+      // a reconnect means the page missed whatever happened while it was down
+      if (firstOpen) { firstOpen = false; return; }
+      syncFromLogs(true, true);
+    };
+    src.addEventListener("quest", function (ev) {
+      var q = JSON.parse(ev.data);
+      LOG[q.id] = q.status;
+      // the game just told us what happened, so drop any stale hand-set value
+      if (S.marks[q.id] !== undefined && S.marks[q.id] !== q.status) {
+        delete S.marks[q.id];
+        persist();
+      }
+      setLivePill(true);
+      var t = BY_ID[q.id];
+      if (t) toast((q.status === "d" ? "Completed: " : q.status === "f" ? "Failed: " : "Accepted: ") + t.n);
+      renderAll();
+    });
+    src.addEventListener("raid", function (ev) {
+      var raid = JSON.parse(ev.data);
+      if (LIVE) LIVE.raid = raid;
+      renderRaid(raid);
+      if (raid.state === "in-raid" && raid.map && S.autoFollow) {
+        S.map = raid.map;
+        persist();
+        renderAll();
+        tab("map");
+        var m = MAP_BY_ID[raid.map];
+        toast("Heading into " + (m ? m.name : raid.map) + " — plan open");
+      }
+    });
+    src.onerror = function () { setLivePill(false); };
   }
 
   document.getElementById("live-pill").addEventListener("click", function () {
     if (LIVE) syncFromLogs(true, false);
   });
   // the same sync lives in the top bar and in Setup — you want it the moment a raid ends
+  document.getElementById("s-connect").addEventListener("click", connectFolder);
+  document.getElementById("s-forget").addEventListener("click", forgetFolder);
+
   ["s-sync", "s-sync-top"].forEach(function (id) {
     var el = document.getElementById(id);
     if (!el) return;

@@ -410,12 +410,14 @@ function splitGuides(data) {
 function assemble() {
   const shell = fs.readFileSync(path.join(SRC, "shell.html"), "utf8");
   const app = fs.readFileSync(path.join(SRC, "app.js"), "utf8");
+  const logsrc = fs.readFileSync(path.join(SRC, "logsrc.js"), "utf8");
   const full = JSON.parse(fs.readFileSync(DATA_FILE, "utf8"));
   const { core, guides } = splitGuides(full);
   const data = JSON.stringify(core).replace(/</g, "\u003c");
 
   const body = shell +
     '\n<script id="tarkov-data" type="application/json">' + data + "</script>\n" +
+    "<script>\n" + logsrc + "</script>\n" +
     "<script>\n" + app + "</script>\n";
 
   const cut = body.indexOf("</style>") + "</style>".length;
