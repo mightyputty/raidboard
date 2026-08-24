@@ -838,6 +838,7 @@
         (isFailed(t.i) ? '<span class="chip crit" title="the game logged this as failed">Failed</span>' : "") +
         (isOverridden(t.i) ? '<span class="chip crit" title="you set this by hand; the game logs say otherwise">manual</span>' : "") +
         (t.w ? '<a class="chip" href="' + esc(t.w) + '" target="_blank" rel="noopener">Wiki</a>' : "") +
+        questGuideBits(t).btn +
         "</div></div>" +
         '<div class="seg" role="group" data-id="' + esc(t.i) + '" aria-label="' + esc(t.n) + ' status">' +
         segBtn(t.i, "", "Not started", st === "") +
@@ -846,7 +847,8 @@
         "</div>" +
         '<button class="chip act ign" data-ignore="' + esc(t.i) + '" aria-pressed="' + ign + '" ' +
         'title="' + (ign ? "Count this quest again" : "Park it — keeps the quest but drops it from the board and map plans") + '">' +
-        (ign ? "Un-ignore" : "Ignore") + "</button></div>";
+        (ign ? "Un-ignore" : "Ignore") + "</button>" +
+        questGuideBits(t).panel + "</div>";
     }).join("") + (rows.length > shown.length ? '<p class="empty">Showing the first ' + shown.length + ". Narrow the search to see the rest.</p>" : "")
       : '<p class="empty">No quests match those filters.</p>';
   }
@@ -961,11 +963,15 @@
       .then(function (d) { guideCache[taskId] = d; return d; });
   }
 
+  // no-referrer is not optional. The wiki's CDN blocks hotlinking by Referer, and it does it by
+  // answering 404 with a real 300x171 JPEG saying so — an image that decodes, so onerror never
+  // fires and naturalWidth is happily non-zero. Every screenshot silently became that placeholder.
+  // Sending no Referer at all gets the actual file back.
   function shotGrid(list) {
     if (!list || !list.length) return "";
     return '<div class="shots"><div class="shots-grid">' + list.map(function (s) {
-      return '<a href="' + esc(s.u) + '" target="_blank" rel="noopener" title="Open full size">' +
-        '<img src="' + esc(s.u) + '" alt="' + esc(s.c || "screenshot") + '">' +
+      return '<a href="' + esc(s.u) + '" target="_blank" rel="noopener" referrerpolicy="no-referrer" title="Open full size">' +
+        '<img src="' + esc(s.u) + '" referrerpolicy="no-referrer" alt="' + esc(s.c || "screenshot") + '">' +
         (s.c ? '<span class="shots-cap">' + esc(s.c) + "</span>" : "") + "</a>";
     }).join("") + "</div></div>";
   }
@@ -1007,7 +1013,11 @@
   }
 
   function toggleGuide(oid, taskId, btn) {
-    var box = document.querySelector('[data-guide-for="' + oid + '"]');
+    // The same quest can have a panel open in more than one tab at once — hidden tabs keep their
+    // markup — so resolve the panel from the row that was clicked, not from the whole document.
+    var scope = btn.closest(".qrow") || btn.closest(".grp") || btn.closest(".story-card") ||
+      btn.closest('[role="tabpanel"]') || document;
+    var box = scope.querySelector('[data-guide-for="' + oid + '"]');
     if (!box) return;
     var opening = box.hidden;
     box.hidden = !opening;
@@ -1383,6 +1393,8 @@
     toast(n > 1 ? "Marked as handed in, plus " + (n - 1) + " earlier quests in the chain" : "Marked as handed in");
   });
   document.getElementById("q-list").addEventListener("click", function (e) {
+    var gb = e.target.closest("[data-guide]");
+    if (gb) { e.preventDefault(); toggleGuide(gb.getAttribute("data-guide"), gb.getAttribute("data-task"), gb); return; }
     var ig = e.target.closest("[data-ignore]");
     if (ig) {
       var iid = ig.getAttribute("data-ignore");
