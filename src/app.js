@@ -863,6 +863,30 @@
   }
 
   // ---------- render: setup ----------
+
+  // Not knowing where Tarkov keeps its logs is the likeliest reason someone bounces off this page,
+  // so Setup always says. The local build knows the real folder — the watcher reports it back in
+  // the snapshot — while the hosted site can only offer the usual suspects.
+  var LOG_PATH_USUAL = "C:\\Battlestate Games\\Escape from Tarkov\\Logs";
+
+  function logWhereHTML() {
+    if (SOURCE === "server" && LIVE && LIVE.root) {
+      return "<strong>Reading</strong> <code>" + esc(LIVE.root) + "</code>" +
+        (LIVE.rootMissing
+          ? ". <strong>That folder is not there.</strong> Close the board and start it again pointing " +
+            "at the right one, for example " +
+            "<code>raidboard.exe --logs \"D:\\Games\\Escape from Tarkov\\Logs\"</code>."
+          : ".");
+    }
+    return "<strong>Where the logs live.</strong> Usually " +
+      "<code>" + esc(LOG_PATH_USUAL) + "</code> " +
+      "<button class=\"chip\" id=\"s-copy-path\">Copy</button><br>" +
+      "If Tarkov is installed somewhere else it is the <code>Logs</code> folder sitting beside " +
+      "<code>EscapeFromTarkov.exe</code>. You have the right one when it is full of folders named " +
+      "<code>log_2026.08.24_9-18-50_1.1.0.1.46911</code>." +
+      (SOURCE === "folder" ? "" : " In the folder picker you can paste the path straight into the address bar.");
+  }
+
   function renderSetup() {
     document.getElementById("s-lvl").value = S.level;
     document.getElementById("s-faction").value = S.faction;
@@ -906,6 +930,7 @@
           "It is opened read-only and nothing leaves your machine."
         : "This browser cannot open a folder, so your journal has to be ticked by hand in Quests. " +
           "Chrome and Edge can do it, and the downloadable version works in any browser.";
+    document.getElementById("log-where").innerHTML = logWhereHTML();
     document.getElementById("s-follow").setAttribute("aria-pressed", String(!!S.autoFollow));
     document.getElementById("prov").innerHTML =
       "Quests, maps, keys and objectives come from <a href=\"https://tarkov.dev\" target=\"_blank\" rel=\"noopener\">tarkov.dev</a>, pulled " +
@@ -1402,6 +1427,17 @@
     ta.value = backupText(); ta.select();
     try { document.execCommand("copy"); toast("Backup copied to the clipboard"); }
     catch (e) { toast("Backup written below — copy it by hand"); }
+  });
+  // #log-where is rewritten on every render, so the listener sits on the wrapper that survives it.
+  document.getElementById("log-where").addEventListener("click", function (e) {
+    if (!e.target || e.target.id !== "s-copy-path") return;
+    var ta = document.createElement("textarea");
+    ta.value = LOG_PATH_USUAL;
+    ta.style.position = "fixed"; ta.style.left = "-9999px";
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); toast("Path copied — paste it into the folder picker"); }
+    catch (err) { toast("Could not copy — the path is written above"); }
+    document.body.removeChild(ta);
   });
   document.getElementById("s-save").addEventListener("click", function () {
     var text = backupText();
